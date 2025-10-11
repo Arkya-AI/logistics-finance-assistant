@@ -7,7 +7,7 @@ export interface ChatMessage {
   ts: number;
 }
 
-export type TaskStatus = "queued" | "running" | "done" | "error";
+export type TaskStatus = "queued" | "running" | "done" | "error" | "paused";
 
 export interface TaskEvent {
   id: string;
@@ -42,7 +42,10 @@ export interface TimelineEntry {
 export interface ExceptionItem {
   id: string;
   runId: string;
-  field: ParsedField;
+  docId: string;
+  fieldKey: string;
+  suggestedValue: string;
+  confidence: number;
   reason: string;
   ts: number;
 }

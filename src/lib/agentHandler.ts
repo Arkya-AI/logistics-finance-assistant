@@ -49,7 +49,7 @@ function parseIntent(text: string): Intent {
   return { action: "unknown", entities: {} };
 }
 
-async function executePlan(intent: Intent, runId: string): Promise<string> {
+async function executePlan(intent: Intent, runId: string, addException: any, pauseRun: any): Promise<string> {
   let result = "";
 
   switch (intent.action) {
@@ -60,7 +60,19 @@ async function executePlan(intent: Intent, runId: string): Promise<string> {
     }
     case "create": {
       await runOcrMock({ docId: intent.entities.docId || "doc-001", runId });
-      const normalized = await normalizeFieldsMock({ docId: intent.entities.docId || "doc-001", runId });
+      const normalized = await normalizeFieldsMock({ 
+        docId: intent.entities.docId || "doc-001", 
+        runId, 
+        addException, 
+        pauseRun 
+      });
+      
+      // If paused, don't continue to invoice creation
+      if (normalized.paused) {
+        result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+        break;
+      }
+      
       const invoice = await createInvoiceMock({ docId: intent.entities.docId || "doc-001", runId });
       result = `Created invoice ${invoice.invoiceId} from document ${invoice.docId}. Status: ${invoice.status}.`;
       break;
@@ -86,7 +98,19 @@ async function executePlan(intent: Intent, runId: string): Promise<string> {
     }
     case "process": {
       await runOcrMock({ docId: intent.entities.docId || "doc-001", runId });
-      await normalizeFieldsMock({ docId: intent.entities.docId || "doc-001", runId });
+      const normalized = await normalizeFieldsMock({ 
+        docId: intent.entities.docId || "doc-001", 
+        runId, 
+        addException, 
+        pauseRun 
+      });
+      
+      // If paused, don't mark as fully processed
+      if (normalized.paused) {
+        result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+        break;
+      }
+      
       result = `Processed document ${intent.entities.docId || "doc-001"} successfully.`;
       break;
     }
@@ -99,7 +123,9 @@ async function executePlan(intent: Intent, runId: string): Promise<string> {
 
 export async function handleUserMessage(
   text: string,
-  addMessage: (msg: ChatMessage) => void
+  addMessage: (msg: ChatMessage) => void,
+  addException: any,
+  pauseRun: any
 ): Promise<void> {
   const runId = generateRunId();
   const intent = parseIntent(text);
@@ -115,7 +141,7 @@ export async function handleUserMessage(
   });
 
   // Execute the plan
-  const assistantReply = await executePlan(intent, runId);
+  const assistantReply = await executePlan(intent, runId, addException, pauseRun);
 
   // Add assistant message
   addMessage({
@@ -124,4 +150,42 @@ export async function handleUserMessage(
     text: assistantReply,
     ts: Date.now(),
   });
+}
+
+export async function resumeRunExecution(
+  runId: string,
+  intent: any,
+  step: string,
+  addMessage: (msg: ChatMessage) => void
+): Promise<void> {
+  eventBus.publish({
+    id: `evt-resume-${runId}`,
+    runId,
+    step: "Resume",
+    status: "running",
+    message: `Resuming from ${step}...`,
+    ts: Date.now(),
+  });
+
+  // Continue with invoice creation after normalize was paused
+  if (intent.action === "create" && step === "Normalize Fields") {
+    const invoice = await createInvoiceMock({ docId: intent.entities.docId || "doc-001", runId });
+    const result = `Created invoice ${invoice.invoiceId} from document ${invoice.docId}. Status: ${invoice.status}.`;
+    
+    addMessage({
+      id: `msg-${Date.now()}`,
+      role: "assistant",
+      text: result,
+      ts: Date.now(),
+    });
+  } else if (intent.action === "process" && step === "Normalize Fields") {
+    const result = `Processed document ${intent.entities.docId || "doc-001"} successfully.`;
+    
+    addMessage({
+      id: `msg-${Date.now()}`,
+      role: "assistant",
+      text: result,
+      ts: Date.now(),
+    });
+  }
 }

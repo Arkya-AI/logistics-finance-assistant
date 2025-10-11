@@ -44,25 +44,74 @@ export async function runOcrMock({ docId, runId }: { docId: string; runId: strin
   return { docId, text: "Mock extracted text from invoice..." };
 }
 
-export async function normalizeFieldsMock({ docId, runId }: { docId: string; runId: string }) {
+export async function normalizeFieldsMock({ 
+  docId, 
+  runId, 
+  addException, 
+  pauseRun 
+}: { 
+  docId: string; 
+  runId: string;
+  addException: (exception: any) => void;
+  pauseRun: (runId: string, intent: any, step: string) => void;
+}) {
   const step = "Normalize Fields";
   emitEvent(runId, step, "queued", "Queued field normalization");
   await delay(300);
   emitEvent(runId, step, "running", "Normalizing extracted fields...");
   await delay(900);
   
-  // Emit a low-confidence warning
-  emitEvent(runId, step, "running", "⚠️ Low confidence detected on Vendor Name field");
-  await delay(400);
+  // Mock fields with varying confidence
+  const fields = [
+    { key: "Vendor Name", value: "Acme Corp", confidence: 0.45 },
+    { key: "Invoice Date", value: "2025-01-15", confidence: 0.92 },
+    { key: "Total Amount", value: "$1,250.00", confidence: 0.88 },
+  ];
   
-  emitEvent(runId, step, "done", "Fields normalized with 1 exception", docId);
+  // Check for low-confidence fields
+  const lowConfidenceFields = fields.filter((f) => f.confidence < 0.85);
+  
+  if (lowConfidenceFields.length > 0) {
+    for (const field of lowConfidenceFields) {
+      // Emit low-confidence warning
+      emitEvent(
+        runId, 
+        step, 
+        "running", 
+        `Low confidence: ${field.key} (${(field.confidence * 100).toFixed(0)}%)`
+      );
+      
+      // Add exception
+      addException({
+        id: `exc-${runId}-${field.key}`,
+        runId,
+        docId,
+        fieldKey: field.key,
+        suggestedValue: field.value,
+        confidence: field.confidence,
+        reason: `Confidence ${(field.confidence * 100).toFixed(0)}% is below threshold`,
+        ts: Date.now(),
+      });
+      
+      await delay(300);
+    }
+    
+    // Pause the run
+    emitEvent(runId, step, "paused", `Paused: ${lowConfidenceFields.length} exception(s) require review`);
+    pauseRun(runId, { action: "normalize", docId }, step);
+    
+    return {
+      docId,
+      fields,
+      paused: true,
+    };
+  }
+  
+  emitEvent(runId, step, "done", "Fields normalized successfully", docId);
   return {
     docId,
-    fields: [
-      { key: "Vendor Name", value: "Acme Corp", confidence: 0.45 },
-      { key: "Invoice Date", value: "2025-01-15", confidence: 0.92 },
-      { key: "Total Amount", value: "$1,250.00", confidence: 0.88 },
-    ],
+    fields,
+    paused: false,
   };
 }
 

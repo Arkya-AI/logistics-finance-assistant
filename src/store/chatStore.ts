@@ -7,6 +7,7 @@ interface ChatStore {
   currentDoc: CurrentDoc | null;
   timeline: TimelineEntry[];
   exceptions: ExceptionItem[];
+  pausedRuns: Map<string, { intent: any; step: string }>;
   
   addMessage: (message: ChatMessage) => void;
   addTaskEvent: (event: TaskEvent) => void;
@@ -15,9 +16,12 @@ interface ChatStore {
   addException: (exception: ExceptionItem) => void;
   removeException: (id: string) => void;
   updateDocField: (fieldKey: string, newValue: string) => void;
+  pauseRun: (runId: string, intent: any, step: string) => void;
+  resumeRun: (runId: string) => void;
+  isPaused: (runId: string) => boolean;
 }
 
-export const useChatStore = create<ChatStore>((set) => ({
+export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [],
   taskEvents: [],
   currentDoc: {
@@ -33,6 +37,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   },
   timeline: [],
   exceptions: [],
+  pausedRuns: new Map(),
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -86,4 +91,20 @@ export const useChatStore = create<ChatStore>((set) => ({
           }
         : null,
     })),
+
+  pauseRun: (runId, intent, step) =>
+    set((state) => {
+      const newPausedRuns = new Map(state.pausedRuns);
+      newPausedRuns.set(runId, { intent, step });
+      return { pausedRuns: newPausedRuns };
+    }),
+
+  resumeRun: (runId) =>
+    set((state) => {
+      const newPausedRuns = new Map(state.pausedRuns);
+      newPausedRuns.delete(runId);
+      return { pausedRuns: newPausedRuns };
+    }),
+
+  isPaused: (runId) => get().pausedRuns.has(runId),
 }));
