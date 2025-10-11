@@ -1,11 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatusBadge } from "@/components/Badge";
 import { useChatStore } from "@/store/chatStore";
 import { eventBus } from "@/lib/eventBus";
 
-export function TaskRunner() {
+interface TaskRunnerProps {
+  onTabSwitch?: (tab: string) => void;
+}
+
+export function TaskRunner({ onTabSwitch }: TaskRunnerProps) {
   const { taskEvents, addTaskEvent } = useChatStore();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubscribe = eventBus.subscribeAll((event) => {
@@ -15,6 +20,31 @@ export function TaskRunner() {
     return unsubscribe;
   }, [addTaskEvent]);
 
+  // Auto-scroll to bottom when new events are added
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [taskEvents]);
+
+  const handleEventClick = (event: typeof taskEvents[0]) => {
+    if (!onTabSwitch) return;
+
+    const text = `${event.step} ${event.message}`.toLowerCase();
+
+    if (text.includes("ocr") || text.includes("doc")) {
+      onTabSwitch("doc");
+    } else if (
+      text.includes("normalize") ||
+      text.includes("low confidence") ||
+      text.includes("exception")
+    ) {
+      onTabSwitch("exceptions");
+    } else if (text.includes("invoice") || text.includes("approval")) {
+      onTabSwitch("actions");
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4">
@@ -23,7 +53,7 @@ export function TaskRunner() {
       </div>
 
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-3">
+        <div className="space-y-3" ref={scrollRef}>
           {taskEvents.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No tasks yet. Send a message to get started.
@@ -32,7 +62,8 @@ export function TaskRunner() {
             taskEvents.map((event) => (
               <div
                 key={event.id}
-                className="rounded-lg border bg-card p-3 transition-all hover:shadow-sm"
+                onClick={() => handleEventClick(event)}
+                className="rounded-lg border bg-card p-3 transition-all hover:shadow-sm cursor-pointer hover:bg-accent"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">

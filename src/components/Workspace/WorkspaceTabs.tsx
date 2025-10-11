@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskRunner } from "./TaskRunner";
 import { DocViewer } from "./DocViewer";
@@ -6,9 +7,11 @@ import { Timeline } from "./Timeline";
 import { Exceptions } from "./Exceptions";
 
 export function WorkspaceTabs() {
+  const [activeTab, setActiveTab] = useState("tasks");
+
   return (
     <div className="flex h-full flex-col">
-      <Tabs defaultValue="tasks" className="flex h-full flex-col">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
         <div className="border-b px-4">
           <TabsList className="h-12">
             <TabsTrigger value="tasks">Task Runner</TabsTrigger>
@@ -21,7 +24,7 @@ export function WorkspaceTabs() {
 
         <div className="flex-1 overflow-hidden">
           <TabsContent value="tasks" className="h-full m-0">
-            <TaskRunner />
+            <TaskRunner onTabSwitch={setActiveTab} />
           </TabsContent>
           <TabsContent value="doc" className="h-full m-0">
             <DocViewer />
