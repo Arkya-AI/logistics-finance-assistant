@@ -47,5 +47,6 @@ export interface ExceptionItem {
   ts: number;
 }
 
-// Re-export email types
+// Re-export email and document types
 export * from "./email";
+export * from "./documents";
