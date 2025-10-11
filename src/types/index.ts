@@ -46,3 +46,6 @@ export interface ExceptionItem {
   reason: string;
   ts: number;
 }
+
+// Re-export email types
+export * from "./email";
