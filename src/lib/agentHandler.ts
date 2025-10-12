@@ -287,6 +287,14 @@ export async function resumeRunExecution(
   step: string,
   addMessage: (msg: ChatMessage) => void
 ): Promise<void> {
+  // Import store dynamically to avoid circular dependencies
+  const { useChatStore } = await import("@/store/chatStore");
+  const { runState, isResuming } = useChatStore.getState();
+  
+  // Idempotence guards
+  if (runState !== 'paused:exception' && runState !== 'running') return;
+  if (isResuming && runState !== 'running') return;
+  
   eventBus.publish({
     id: `evt-resume-${runId}`,
     runId,
@@ -342,6 +350,14 @@ export async function approveAndExecuteInvoice(
   intent: any,
   addMessage: (msg: ChatMessage) => void
 ): Promise<void> {
+  // Import store dynamically to avoid circular dependencies
+  const { useChatStore } = await import("@/store/chatStore");
+  const { runState, isResuming } = useChatStore.getState();
+  
+  // Idempotence guards
+  if (runState !== 'pending:approval' && runState !== 'running') return;
+  if (isResuming && runState !== 'running') return;
+  
   eventBus.publish({
     id: `evt-approved-${runId}`,
     runId,

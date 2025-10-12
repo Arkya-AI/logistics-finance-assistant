@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { ChatMessage, TaskEvent, CurrentDoc, TimelineEntry, ExceptionItem } from "@/types";
 import { loadState, saveState } from "@/lib/persist";
 
+export type RunState = 'idle' | 'planning' | 'running' | 'paused:exception' | 'pending:approval' | 'done';
+
 interface ChatStore {
   messages: ChatMessage[];
   taskEvents: TaskEvent[];
@@ -10,6 +12,8 @@ interface ChatStore {
   exceptions: ExceptionItem[];
   pausedRuns: Map<string, { intent: any; step: string }>;
   pendingApproval: { runId: string; intent: any; step: string } | null;
+  runState: RunState;
+  isResuming: boolean;
   
   addMessage: (message: ChatMessage) => void;
   addTaskEvent: (event: TaskEvent) => void;
@@ -23,6 +27,8 @@ interface ChatStore {
   isPaused: (runId: string) => boolean;
   setPendingApproval: (runId: string, intent: any, step: string) => void;
   clearPendingApproval: () => void;
+  setRunState: (state: RunState) => void;
+  setIsResuming: (isResuming: boolean) => void;
 }
 
 // Load persisted state
@@ -47,6 +53,8 @@ export const useChatStore = create<ChatStore>((set, get) => {
     exceptions: persistedState?.exceptions || [],
     pausedRuns: new Map(),
     pendingApproval: null,
+    runState: 'idle' as RunState,
+    isResuming: false,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -105,7 +113,10 @@ export const useChatStore = create<ChatStore>((set, get) => {
     set((state) => {
       const newPausedRuns = new Map(state.pausedRuns);
       newPausedRuns.set(runId, { intent, step });
-      return { pausedRuns: newPausedRuns };
+      return { 
+        pausedRuns: newPausedRuns,
+        runState: 'paused:exception' as RunState
+      };
     }),
 
   resumeRun: (runId) =>
@@ -118,10 +129,19 @@ export const useChatStore = create<ChatStore>((set, get) => {
   isPaused: (runId) => get().pausedRuns.has(runId),
 
   setPendingApproval: (runId, intent, step) =>
-    set({ pendingApproval: { runId, intent, step } }),
+    set({ 
+      pendingApproval: { runId, intent, step },
+      runState: 'pending:approval' as RunState
+    }),
 
   clearPendingApproval: () =>
     set({ pendingApproval: null }),
+
+  setRunState: (state) =>
+    set({ runState: state }),
+
+  setIsResuming: (isResuming) =>
+    set({ isResuming }),
   };
 
   // Subscribe to changes and persist relevant slices

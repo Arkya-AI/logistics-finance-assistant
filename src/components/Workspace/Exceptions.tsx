@@ -10,10 +10,27 @@ import { eventBus } from "@/lib/eventBus";
 import { resumeRunExecution } from "@/lib/agentHandler";
 
 export function Exceptions() {
-  const { exceptions, removeException, updateDocField, currentDoc, resumeRun, addMessage } = useChatStore();
+  const { 
+    exceptions, 
+    removeException, 
+    updateDocField, 
+    currentDoc, 
+    resumeRun, 
+    addMessage,
+    runState,
+    isResuming,
+    setIsResuming,
+    setRunState
+  } = useChatStore();
   const [editValues, setEditValues] = useState<Record<string, string>>({});
 
   const handleAcceptAndContinue = async (exception: typeof exceptions[0]) => {
+    // Idempotence guards
+    if (runState !== 'paused:exception') return;
+    if (isResuming) return;
+    
+    setIsResuming(true);
+    
     const finalValue = editValues[exception.id] ?? exception.suggestedValue;
     
     // Update the document field
@@ -42,12 +59,16 @@ export function Exceptions() {
     if (remainingExceptions.length === 0) {
       // Resume the run
       resumeRun(exception.runId);
+      setRunState('running');
       
       // Get paused run info and continue execution
       const pausedRun = useChatStore.getState().pausedRuns.get(exception.runId);
       if (pausedRun) {
         await resumeRunExecution(exception.runId, pausedRun.intent, pausedRun.step, addMessage);
+        setIsResuming(false);
       }
+    } else {
+      setIsResuming(false);
     }
   };
 

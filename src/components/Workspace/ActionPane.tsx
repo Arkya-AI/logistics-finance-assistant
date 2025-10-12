@@ -6,12 +6,25 @@ import { useChatStore } from "@/store/chatStore";
 import { approveAndExecuteInvoice, rejectInvoiceCreation } from "@/lib/agentHandler";
 
 export function ActionPane() {
-  const { pendingApproval, clearPendingApproval, addMessage } = useChatStore();
+  const { 
+    pendingApproval, 
+    clearPendingApproval, 
+    addMessage,
+    runState,
+    isResuming,
+    setIsResuming,
+    setRunState
+  } = useChatStore();
 
   const handleApprove = async () => {
+    // Idempotence guards
+    if (runState !== 'pending:approval') return;
+    if (isResuming) return;
     if (!pendingApproval) return;
 
+    setIsResuming(true);
     clearPendingApproval();
+    setRunState('running');
     toast.success("Invoice creation approved");
 
     await approveAndExecuteInvoice(
@@ -19,18 +32,28 @@ export function ActionPane() {
       pendingApproval.intent,
       addMessage
     );
+    
+    setIsResuming(false);
+    setRunState('done');
   };
 
   const handleReject = async () => {
+    // Idempotence guards
+    if (runState !== 'pending:approval') return;
+    if (isResuming) return;
     if (!pendingApproval) return;
 
+    setIsResuming(true);
     clearPendingApproval();
+    setRunState('idle');
     toast.error("Invoice creation rejected");
 
     await rejectInvoiceCreation(
       pendingApproval.runId,
       addMessage
     );
+    
+    setIsResuming(false);
   };
 
   return (
