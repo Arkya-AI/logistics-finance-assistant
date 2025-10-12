@@ -1,9 +1,12 @@
 import { ChatPanel } from "@/components/Chat/ChatPanel";
 import { WorkspaceTabs } from "@/components/Workspace/WorkspaceTabs";
+import { DevPanel } from "@/components/DevPanel";
 
 const Index = () => {
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-screen w-full relative">
+      <DevPanel />
+      
       {/* Left: Chat Panel */}
       <div className="w-full md:w-[400px] lg:w-[450px] flex-shrink-0">
         <ChatPanel />
