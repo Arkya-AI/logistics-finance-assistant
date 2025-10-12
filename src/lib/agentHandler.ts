@@ -1,5 +1,6 @@
 import { ChatMessage, TaskEvent } from "@/types";
 import { eventBus } from "./eventBus";
+import { addTimelineEntry, TOOL_LABELS } from "./timelineHelper";
 import {
   ingestEmailMock,
   runOcrMock,
@@ -68,34 +69,40 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
     // Smoke test: "summarize yesterday"
     case "test:summarize": {
       await delay(200);
+      const ts1 = Date.now();
       eventBus.publish({
         id: `evt-test-1-${runId}`,
         runId,
         step: "Fetch Emails",
         status: "done",
         message: "Retrieved 12 emails from yesterday",
-        ts: Date.now(),
+        ts: ts1,
       });
+      addTimelineEntry({ runId, tool: TOOL_LABELS.PLAN, status: "done", message: "Retrieved 12 emails from yesterday", ts: ts1 });
       
       await delay(200);
+      const ts2 = Date.now();
       eventBus.publish({
         id: `evt-test-2-${runId}`,
         runId,
         step: "Categorize",
         status: "done",
         message: "Categorized 8 invoices, 4 inquiries",
-        ts: Date.now(),
+        ts: ts2,
       });
+      addTimelineEntry({ runId, tool: TOOL_LABELS.SUMMARY, status: "done", message: "Categorized 8 invoices, 4 inquiries", ts: ts2 });
       
       await delay(200);
+      const ts3 = Date.now();
       eventBus.publish({
         id: `evt-test-3-${runId}`,
         runId,
         step: "Generate Summary",
         status: "done",
         message: "Summary report ready",
-        ts: Date.now(),
+        ts: ts3,
       });
+      addTimelineEntry({ runId, tool: TOOL_LABELS.SUMMARY, status: "done", message: "Summary report ready", ts: ts3 });
       
       result = "Yesterday: 12 emails, 8 invoices, 4 inquiries. Total amount: $8,450.00";
       break;
@@ -104,14 +111,16 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
     // Smoke test: "process doc"
     case "test:process": {
       await delay(200);
+      const ocrTs = Date.now();
       eventBus.publish({
         id: `evt-ocr-${runId}`,
         runId,
         step: "OCR Extraction",
         status: "done",
         message: "Extracted 6 fields from document",
-        ts: Date.now(),
+        ts: ocrTs,
       });
+      addTimelineEntry({ runId, tool: TOOL_LABELS.OCR, status: "done", message: "Extracted 6 fields from document", ts: ocrTs });
       
       await delay(200);
       // Normalize with low confidence to trigger exception
@@ -143,14 +152,16 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
     // Smoke test: "create invoice"
     case "test:invoice": {
       await delay(200);
+      const prepTs = Date.now();
       eventBus.publish({
         id: `evt-prep-${runId}`,
         runId,
         step: "Prepare Invoice",
         status: "done",
         message: "Invoice data prepared from doc-001",
-        ts: Date.now(),
+        ts: prepTs,
       });
+      addTimelineEntry({ runId, tool: TOOL_LABELS.INVOICE, status: "done", message: "Invoice data prepared from doc-001", ts: prepTs });
       
       await delay(200);
       eventBus.publish({
@@ -349,14 +360,16 @@ export async function resumeRunExecution(
     });
   } else if (intent.action === "test:process" && step === "Normalize Fields") {
     await delay(200);
+    const completeTs = Date.now();
     eventBus.publish({
       id: `evt-complete-${runId}`,
       runId,
       step: "Processing Complete",
       status: "done",
       message: "Document successfully processed",
-      ts: Date.now(),
+      ts: completeTs,
     });
+    addTimelineEntry({ runId, tool: TOOL_LABELS.NORMALIZE, status: "done", message: "Document successfully processed", ts: completeTs });
     
     const result = "Document processing complete. All fields validated.";
     addMessage({
@@ -381,26 +394,30 @@ export async function approveAndExecuteInvoice(
   if (runState !== 'pending:approval' && runState !== 'running') return;
   if (isResuming && runState !== 'running') return;
   
+  const approvalTs = Date.now();
   eventBus.publish({
     id: `evt-approved-${runId}`,
     runId,
     step: "Approval",
     status: "done",
     message: "User approved invoice creation",
-    ts: Date.now(),
+    ts: approvalTs,
   });
+  addTimelineEntry({ runId, tool: TOOL_LABELS.APPROVAL, status: "done", message: "User approved invoice creation", ts: approvalTs });
 
   // Smoke test "create invoice" completion
   if (intent.action === "test:invoice") {
     await delay(200);
+    const invoiceTs = Date.now();
     eventBus.publish({
       id: `evt-invoice-created-${runId}`,
       runId,
       step: "Invoice Created",
       status: "done",
       message: "Invoice INV-TEST-001 created successfully",
-      ts: Date.now(),
+      ts: invoiceTs,
     });
+    addTimelineEntry({ runId, tool: TOOL_LABELS.INVOICE, status: "done", message: "Invoice INV-TEST-001 created successfully", ts: invoiceTs });
     
     addMessage({
       id: `msg-${Date.now()}`,
@@ -426,14 +443,16 @@ export async function rejectInvoiceCreation(
   runId: string,
   addMessage: (msg: ChatMessage) => void
 ): Promise<void> {
+  const rejectTs = Date.now();
   eventBus.publish({
     id: `evt-rejected-${runId}`,
     runId,
     step: "Approval",
     status: "error",
     message: "User rejected invoice creation",
-    ts: Date.now(),
+    ts: rejectTs,
   });
+  addTimelineEntry({ runId, tool: TOOL_LABELS.APPROVAL, status: "error", message: "User rejected invoice creation", ts: rejectTs });
   
   addMessage({
     id: `msg-${Date.now()}`,

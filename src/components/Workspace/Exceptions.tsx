@@ -8,6 +8,7 @@ import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { eventBus } from "@/lib/eventBus";
 import { resumeRunExecution } from "@/lib/agentHandler";
+import { addTimelineEntry, TOOL_LABELS } from "@/lib/timelineHelper";
 
 export function Exceptions() {
   const { 
@@ -40,13 +41,21 @@ export function Exceptions() {
     removeException(exception.id);
     
     // Publish resolved event
+    const resolveTs = Date.now();
     eventBus.publish({
       id: `evt-resolved-${exception.id}`,
       runId: exception.runId,
       step: "Exception Resolved",
       status: "done",
       message: `Accepted ${exception.fieldKey}: ${finalValue}`,
-      ts: Date.now(),
+      ts: resolveTs,
+    });
+    addTimelineEntry({ 
+      runId: exception.runId, 
+      tool: TOOL_LABELS.EXCEPTION, 
+      status: "done", 
+      message: `Exception Resolved: ${exception.fieldKey}`, 
+      ts: resolveTs 
     });
     
     toast.success("Exception resolved");
@@ -77,13 +86,21 @@ export function Exceptions() {
     removeException(exception.id);
     
     // Publish dismissed event
+    const dismissTs = Date.now();
     eventBus.publish({
       id: `evt-dismissed-${exception.id}`,
       runId: exception.runId,
       step: "Exception Dismissed",
       status: "done",
       message: `Dismissed ${exception.fieldKey}`,
-      ts: Date.now(),
+      ts: dismissTs,
+    });
+    addTimelineEntry({ 
+      runId: exception.runId, 
+      tool: TOOL_LABELS.EXCEPTION, 
+      status: "done", 
+      message: `Exception Dismissed: ${exception.fieldKey}`, 
+      ts: dismissTs 
     });
     
     toast.info("Exception dismissed");

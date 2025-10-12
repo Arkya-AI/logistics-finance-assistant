@@ -3,9 +3,20 @@ import { Input } from "@/components/ui/input";
 import { ConfidenceBadge } from "@/components/Badge";
 import { useChatStore } from "@/store/chatStore";
 import { File } from "lucide-react";
+import { addTimelineEntry, TOOL_LABELS } from "@/lib/timelineHelper";
 
 export function DocViewer() {
   const { currentDoc, updateDocField } = useChatStore();
+
+  const handleFieldEdit = (fieldKey: string, newValue: string) => {
+    updateDocField(fieldKey, newValue);
+    addTimelineEntry({
+      runId: currentDoc?.docId || "manual",
+      tool: TOOL_LABELS.USER_EDIT,
+      status: "done",
+      message: `User edited ${fieldKey}`,
+    });
+  };
 
   if (!currentDoc) {
     return (
@@ -53,7 +64,7 @@ export function DocViewer() {
                   </div>
                   <Input
                     value={field.value}
-                    onChange={(e) => updateDocField(field.key, e.target.value)}
+                    onChange={(e) => handleFieldEdit(field.key, e.target.value)}
                     className="font-mono text-sm"
                   />
                 </div>
