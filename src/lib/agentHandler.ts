@@ -179,17 +179,28 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
       break;
     }
     case "create": {
-      await runOcrMock({ docId: intent.entities.docId || "doc-001", runId });
-      const normalized = await normalizeFieldsMock({ 
+      try {
+        await runOcrMock({ docId: intent.entities.docId || "doc-001", runId });
+      } catch (error) {
+        result = `I hit an error on OCR. ${error instanceof Error ? error.message : "Unknown error"}`;
+        break;
+      }
+      
+      try {
+        const normalized = await normalizeFieldsMock({
         docId: intent.entities.docId || "doc-001", 
         runId, 
-        addException, 
-        pauseRun 
-      });
-      
-      // If paused, don't continue to invoice creation
-      if (normalized.paused) {
-        result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+          addException, 
+          pauseRun 
+        });
+        
+        // If paused, don't continue to invoice creation
+        if (normalized.paused) {
+          result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+          break;
+        }
+      } catch (error) {
+        result = `I hit an error on Normalize. ${error instanceof Error ? error.message : "Unknown error"}`;
         break;
       }
       
@@ -226,17 +237,28 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
       break;
     }
     case "process": {
-      await runOcrMock({ docId: intent.entities.docId || "doc-001", runId });
-      const normalized = await normalizeFieldsMock({ 
-        docId: intent.entities.docId || "doc-001", 
-        runId, 
-        addException, 
-        pauseRun 
-      });
+      try {
+        await runOcrMock({ docId: intent.entities.docId || "doc-001", runId });
+      } catch (error) {
+        result = `I hit an error on OCR. ${error instanceof Error ? error.message : "Unknown error"}`;
+        break;
+      }
       
-      // If paused, don't mark as fully processed
-      if (normalized.paused) {
-        result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+      try {
+        const normalized = await normalizeFieldsMock({ 
+          docId: intent.entities.docId || "doc-001", 
+          runId, 
+          addException, 
+          pauseRun 
+        });
+        
+        // If paused, don't mark as fully processed
+        if (normalized.paused) {
+          result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+          break;
+        }
+      } catch (error) {
+        result = `I hit an error on Normalize. ${error instanceof Error ? error.message : "Unknown error"}`;
         break;
       }
       

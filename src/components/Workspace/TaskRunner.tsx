@@ -1,15 +1,18 @@
 import { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatusBadge } from "@/components/Badge";
 import { useChatStore } from "@/store/chatStore";
 import { eventBus } from "@/lib/eventBus";
+import { RotateCw } from "lucide-react";
+import { toast } from "sonner";
 
 interface TaskRunnerProps {
   onTabSwitch?: (tab: string) => void;
 }
 
 export function TaskRunner({ onTabSwitch }: TaskRunnerProps) {
-  const { taskEvents, addTaskEvent } = useChatStore();
+  const { taskEvents, addTaskEvent, lastFailedStep, setLastFailedStep } = useChatStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,11 +48,46 @@ export function TaskRunner({ onTabSwitch }: TaskRunnerProps) {
     }
   };
 
+  const handleRetryStep = () => {
+    if (!lastFailedStep) return;
+    
+    toast.info(`Retrying ${lastFailedStep.tool}...`);
+    setLastFailedStep(null);
+    
+    // Mock: publish a success event for demo purposes
+    setTimeout(() => {
+      eventBus.publish({
+        id: `evt-retry-${Date.now()}`,
+        runId: lastFailedStep.runId,
+        step: lastFailedStep.step,
+        status: "done",
+        message: `${lastFailedStep.tool} succeeded on retry`,
+        ts: Date.now(),
+      });
+      toast.success("Step completed successfully");
+    }, 1000);
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4">
-        <h3 className="font-semibold">Task Runner</h3>
-        <p className="text-sm text-muted-foreground">Live execution steps</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">Task Runner</h3>
+            <p className="text-sm text-muted-foreground">Live execution steps</p>
+          </div>
+          {lastFailedStep && (
+            <Button
+              onClick={handleRetryStep}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <RotateCw className="h-4 w-4" />
+              Retry Step
+            </Button>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1 p-4">

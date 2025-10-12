@@ -15,6 +15,8 @@ interface ChatStore {
   runState: RunState;
   isResuming: boolean;
   activeRunId: string | null;
+  devErrorsEnabled: boolean;
+  lastFailedStep: { runId: string; step: string; tool: string } | null;
   
   addMessage: (message: ChatMessage) => void;
   addTaskEvent: (event: TaskEvent) => void;
@@ -31,6 +33,8 @@ interface ChatStore {
   setRunState: (state: RunState) => void;
   setIsResuming: (isResuming: boolean) => void;
   setActiveRunId: (runId: string | null) => void;
+  toggleDevErrors: () => void;
+  setLastFailedStep: (step: { runId: string; step: string; tool: string } | null) => void;
 }
 
 // Load persisted state
@@ -58,6 +62,8 @@ export const useChatStore = create<ChatStore>((set, get) => {
     runState: 'idle' as RunState,
     isResuming: false,
     activeRunId: null,
+    devErrorsEnabled: false,
+    lastFailedStep: null,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -148,6 +154,12 @@ export const useChatStore = create<ChatStore>((set, get) => {
 
   setActiveRunId: (activeRunId) =>
     set({ activeRunId }),
+
+  toggleDevErrors: () =>
+    set((state) => ({ devErrorsEnabled: !state.devErrorsEnabled })),
+
+  setLastFailedStep: (lastFailedStep) =>
+    set({ lastFailedStep }),
   };
 
   // Subscribe to changes and persist relevant slices

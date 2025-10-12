@@ -1,5 +1,6 @@
 import { eventBus } from "./eventBus";
 import { TaskEvent } from "@/types";
+import { useChatStore } from "@/store/chatStore";
 
 let eventIdCounter = 0;
 
@@ -24,6 +25,11 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function shouldSimulateError(): boolean {
+  const { devErrorsEnabled } = useChatStore.getState();
+  return devErrorsEnabled && Math.random() < 0.1;
+}
+
 export async function ingestEmailMock({ sinceTs, runId }: { sinceTs: number; runId: string }) {
   const step = "Ingest Email";
   emitEvent(runId, step, "queued", "Queued email ingestion");
@@ -40,6 +46,15 @@ export async function runOcrMock({ docId, runId }: { docId: string; runId: strin
   await delay(300);
   emitEvent(runId, step, "running", `Running OCR on document ${docId}...`);
   await delay(1200);
+  
+  // Simulate random OCR error (10% if dev errors enabled)
+  if (shouldSimulateError()) {
+    const errorMsg = "OCR service timeout. Please retry or check document quality.";
+    emitEvent(runId, step, "error", errorMsg, docId);
+    useChatStore.getState().setLastFailedStep({ runId, step, tool: "OCR" });
+    throw new Error(errorMsg);
+  }
+  
   emitEvent(runId, step, "done", "OCR completed successfully", docId);
   return { docId, text: "Mock extracted text from invoice..." };
 }
@@ -60,6 +75,14 @@ export async function normalizeFieldsMock({
   await delay(300);
   emitEvent(runId, step, "running", "Normalizing extracted fields...");
   await delay(900);
+  
+  // Simulate random timeout error (10% if dev errors enabled)
+  if (shouldSimulateError()) {
+    const errorMsg = "Normalization timeout. Database connection lost. Please retry.";
+    emitEvent(runId, step, "error", errorMsg, docId);
+    useChatStore.getState().setLastFailedStep({ runId, step, tool: "Normalize" });
+    throw new Error(errorMsg);
+  }
   
   // Mock fields with varying confidence
   const fields = [
