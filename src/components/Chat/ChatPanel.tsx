@@ -9,7 +9,7 @@ import { ChatMessage as ChatMessageType } from "@/types";
 
 export function ChatPanel() {
   const [input, setInput] = useState("");
-  const { messages, addMessage, addException, pauseRun } = useChatStore();
+  const { messages, addMessage, addException, pauseRun, setPendingApproval } = useChatStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function ChatPanel() {
     setInput("");
 
     // Handle the message with the agent
-    await handleUserMessage(input, addMessage, addException, pauseRun);
+    await handleUserMessage(input, addMessage, addException, pauseRun, setPendingApproval);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

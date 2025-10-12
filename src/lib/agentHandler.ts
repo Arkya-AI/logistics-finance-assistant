@@ -49,7 +49,7 @@ function parseIntent(text: string): Intent {
   return { action: "unknown", entities: {} };
 }
 
-async function executePlan(intent: Intent, runId: string, addException: any, pauseRun: any): Promise<string> {
+async function executePlan(intent: Intent, runId: string, addException: any, pauseRun: any, setPendingApproval: any): Promise<string> {
   let result = "";
 
   switch (intent.action) {
@@ -73,8 +73,17 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
         break;
       }
       
-      const invoice = await createInvoiceMock({ docId: intent.entities.docId || "doc-001", runId });
-      result = `Created invoice ${invoice.invoiceId} from document ${invoice.docId}. Status: ${invoice.status}.`;
+      // Pause for approval before creating invoice
+      eventBus.publish({
+        id: `evt-approval-${runId}`,
+        runId,
+        step: "Awaiting Approval",
+        status: "paused",
+        message: "Waiting for user approval to create invoice...",
+        ts: Date.now(),
+      });
+      setPendingApproval(runId, intent, "Create Invoice");
+      result = "Invoice creation pending approval. Please review in the Action Pane.";
       break;
     }
     case "send": {
@@ -125,7 +134,8 @@ export async function handleUserMessage(
   text: string,
   addMessage: (msg: ChatMessage) => void,
   addException: any,
-  pauseRun: any
+  pauseRun: any,
+  setPendingApproval: any
 ): Promise<void> {
   const runId = generateRunId();
   const intent = parseIntent(text);
@@ -141,7 +151,7 @@ export async function handleUserMessage(
   });
 
   // Execute the plan
-  const assistantReply = await executePlan(intent, runId, addException, pauseRun);
+  const assistantReply = await executePlan(intent, runId, addException, pauseRun, setPendingApproval);
 
   // Add assistant message
   addMessage({

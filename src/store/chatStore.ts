@@ -8,6 +8,7 @@ interface ChatStore {
   timeline: TimelineEntry[];
   exceptions: ExceptionItem[];
   pausedRuns: Map<string, { intent: any; step: string }>;
+  pendingApproval: { runId: string; intent: any; step: string } | null;
   
   addMessage: (message: ChatMessage) => void;
   addTaskEvent: (event: TaskEvent) => void;
@@ -19,6 +20,8 @@ interface ChatStore {
   pauseRun: (runId: string, intent: any, step: string) => void;
   resumeRun: (runId: string) => void;
   isPaused: (runId: string) => boolean;
+  setPendingApproval: (runId: string, intent: any, step: string) => void;
+  clearPendingApproval: () => void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -38,6 +41,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   timeline: [],
   exceptions: [],
   pausedRuns: new Map(),
+  pendingApproval: null,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -107,4 +111,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }),
 
   isPaused: (runId) => get().pausedRuns.has(runId),
+
+  setPendingApproval: (runId, intent, step) =>
+    set({ pendingApproval: { runId, intent, step } }),
+
+  clearPendingApproval: () =>
+    set({ pendingApproval: null }),
 }));
