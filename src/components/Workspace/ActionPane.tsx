@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, FileQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";
 import { approveAndExecuteInvoice, rejectInvoiceCreation } from "@/lib/agentHandler";
@@ -15,6 +16,15 @@ export function ActionPane() {
     setIsResuming,
     setRunState
   } = useChatStore();
+  
+  const [buttonsDisabled, setButtonsDisabled] = useState(false);
+
+  // Re-enable buttons on error
+  useEffect(() => {
+    if (runState === 'idle' && buttonsDisabled) {
+      setButtonsDisabled(false);
+    }
+  }, [runState, buttonsDisabled]);
 
   const handleApprove = async () => {
     // Idempotence guards
@@ -22,19 +32,28 @@ export function ActionPane() {
     if (isResuming) return;
     if (!pendingApproval) return;
 
+    setButtonsDisabled(true);
     setIsResuming(true);
     clearPendingApproval();
     setRunState('running');
     toast.success("Invoice creation approved");
 
-    await approveAndExecuteInvoice(
-      pendingApproval.runId,
-      pendingApproval.intent,
-      addMessage
-    );
-    
-    setIsResuming(false);
-    setRunState('done');
+    try {
+      await approveAndExecuteInvoice(
+        pendingApproval.runId,
+        pendingApproval.intent,
+        addMessage
+      );
+      
+      setRunState('done');
+    } catch (error) {
+      toast.error("Approval failed");
+      setRunState('idle');
+    } finally {
+      setIsResuming(false);
+      // Re-enable after 2s timeout or completion
+      setTimeout(() => setButtonsDisabled(false), 2000);
+    }
   };
 
   const handleReject = async () => {
@@ -43,17 +62,23 @@ export function ActionPane() {
     if (isResuming) return;
     if (!pendingApproval) return;
 
+    setButtonsDisabled(true);
     setIsResuming(true);
     clearPendingApproval();
     setRunState('idle');
     toast.error("Invoice creation rejected");
 
-    await rejectInvoiceCreation(
-      pendingApproval.runId,
-      addMessage
-    );
-    
-    setIsResuming(false);
+    try {
+      await rejectInvoiceCreation(
+        pendingApproval.runId,
+        addMessage
+      );
+    } catch (error) {
+      toast.error("Rejection failed");
+    } finally {
+      setIsResuming(false);
+      setTimeout(() => setButtonsDisabled(false), 2000);
+    }
   };
 
   return (
@@ -64,45 +89,46 @@ export function ActionPane() {
       </div>
 
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-6">
-          {pendingApproval ? (
-            <div className="rounded-lg border border-status-warning bg-card p-4">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <span className="text-status-warning">⚠️</span>
-                Pending Review
-              </h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                The agent is waiting for your approval before proceeding with invoice creation.
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button
-                  onClick={handleApprove}
-                  className="w-full justify-start gap-2"
-                  variant="default"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Approve and Continue
-                </Button>
+        {pendingApproval ? (
+          <div className="rounded-lg border border-status-warning bg-card p-4">
+            <h4 className="font-medium mb-2 flex items-center gap-2">
+              <span className="text-status-warning">⚠️</span>
+              Pending Review
+            </h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              The agent is waiting for your approval before proceeding with invoice creation.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleApprove}
+                disabled={buttonsDisabled || isResuming}
+                className="w-full justify-start gap-2"
+                variant="default"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Approve and Continue
+              </Button>
 
-                <Button
-                  onClick={handleReject}
-                  className="w-full justify-start gap-2"
-                  variant="destructive"
-                >
-                  <XCircle className="h-4 w-4" />
-                  Reject
-                </Button>
-              </div>
+              <Button
+                onClick={handleReject}
+                disabled={buttonsDisabled || isResuming}
+                className="w-full justify-start gap-2"
+                variant="destructive"
+              >
+                <XCircle className="h-4 w-4" />
+                Reject
+              </Button>
             </div>
-          ) : (
-            <div className="rounded-lg border bg-card p-4">
-              <h4 className="font-medium mb-3">Action Pane</h4>
-              <p className="text-sm text-muted-foreground">
-                No pending actions. Approval requests will appear here when invoice creation is triggered.
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <FileQuestion className="h-12 w-12 text-muted-foreground/40 mb-3" />
+            <h4 className="font-medium text-sm mb-1">No Pending Actions</h4>
+            <p className="text-xs text-muted-foreground max-w-[240px]">
+              Approval requests will appear here when invoice creation is triggered.
+            </p>
+          </div>
+        )}
       </ScrollArea>
     </div>
   );
