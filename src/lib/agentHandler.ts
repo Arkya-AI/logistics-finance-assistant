@@ -259,6 +259,29 @@ export async function handleUserMessage(
   const runId = generateRunId();
   const intent = parseIntent(text);
 
+  // Handle unknown intent
+  if (intent.action === "unknown") {
+    const helpMessage = 'I did not recognize that. Try: "summarize yesterday", "process doc", "create invoice".';
+    
+    eventBus.publish({
+      id: `evt-analyze-${runId}`,
+      runId,
+      step: "Analyze",
+      status: "error",
+      message: helpMessage,
+      ts: Date.now(),
+    });
+    
+    addMessage({
+      id: `msg-${Date.now()}`,
+      role: "assistant",
+      text: helpMessage,
+      ts: Date.now(),
+    });
+    
+    return;
+  }
+
   // Emit a "plan" event
   eventBus.publish({
     id: `evt-plan-${runId}`,
