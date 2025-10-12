@@ -24,6 +24,18 @@ interface Intent {
 function parseIntent(text: string): Intent {
   const lower = text.toLowerCase();
   
+  // Deterministic smoke-test commands
+  if (lower === "summarize yesterday") {
+    return { action: "test:summarize", entities: {} };
+  }
+  if (lower === "process doc") {
+    return { action: "test:process", entities: {} };
+  }
+  if (lower === "create invoice") {
+    return { action: "test:invoice", entities: {} };
+  }
+  
+  // Regular commands
   if (lower.includes("summarize") || lower.includes("summary")) {
     return { action: "summarize", entities: { range: "last 7 days" } };
   }
@@ -53,6 +65,108 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
   let result = "";
 
   switch (intent.action) {
+    // Smoke test: "summarize yesterday"
+    case "test:summarize": {
+      await delay(200);
+      eventBus.publish({
+        id: `evt-test-1-${runId}`,
+        runId,
+        step: "Fetch Emails",
+        status: "done",
+        message: "Retrieved 12 emails from yesterday",
+        ts: Date.now(),
+      });
+      
+      await delay(200);
+      eventBus.publish({
+        id: `evt-test-2-${runId}`,
+        runId,
+        step: "Categorize",
+        status: "done",
+        message: "Categorized 8 invoices, 4 inquiries",
+        ts: Date.now(),
+      });
+      
+      await delay(200);
+      eventBus.publish({
+        id: `evt-test-3-${runId}`,
+        runId,
+        step: "Generate Summary",
+        status: "done",
+        message: "Summary report ready",
+        ts: Date.now(),
+      });
+      
+      result = "Yesterday: 12 emails, 8 invoices, 4 inquiries. Total amount: $8,450.00";
+      break;
+    }
+
+    // Smoke test: "process doc"
+    case "test:process": {
+      await delay(200);
+      eventBus.publish({
+        id: `evt-ocr-${runId}`,
+        runId,
+        step: "OCR Extraction",
+        status: "done",
+        message: "Extracted 6 fields from document",
+        ts: Date.now(),
+      });
+      
+      await delay(200);
+      // Normalize with low confidence to trigger exception
+      addException({
+        id: `exc-test-${runId}`,
+        runId,
+        docId: "doc-001",
+        fieldKey: "Vendor Name",
+        suggestedValue: "Test Vendor Inc",
+        confidence: 0.72,
+        reason: "Handwritten text unclear",
+        ts: Date.now(),
+      });
+      
+      eventBus.publish({
+        id: `evt-norm-${runId}`,
+        runId,
+        step: "Low confidence: Vendor Name (0.72)",
+        status: "paused",
+        message: "⚠️ Low confidence field detected",
+        ts: Date.now(),
+      });
+      
+      pauseRun(runId, intent, "Normalize Fields");
+      result = "Document processing paused due to low-confidence fields. Please review exceptions.";
+      break;
+    }
+
+    // Smoke test: "create invoice"
+    case "test:invoice": {
+      await delay(200);
+      eventBus.publish({
+        id: `evt-prep-${runId}`,
+        runId,
+        step: "Prepare Invoice",
+        status: "done",
+        message: "Invoice data prepared from doc-001",
+        ts: Date.now(),
+      });
+      
+      await delay(200);
+      eventBus.publish({
+        id: `evt-approval-${runId}`,
+        runId,
+        step: "Awaiting Approval",
+        status: "paused",
+        message: "Invoice ready for review and approval",
+        ts: Date.now(),
+      });
+      
+      setPendingApproval(runId, intent, "Create Invoice");
+      result = "Invoice creation pending approval. Please review in the Action Pane.";
+      break;
+    }
+
     case "summarize": {
       const data = await summarizeInboxMock({ range: intent.entities.range || "last 7 days", runId });
       result = `Inbox summary (${data.range}): ${data.summary}. Total emails: ${data.totalEmails}.`;
@@ -130,6 +244,11 @@ async function executePlan(intent: Intent, runId: string, addException: any, pau
   return result;
 }
 
+// Utility: Delay helper
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function handleUserMessage(
   text: string,
   addMessage: (msg: ChatMessage) => void,
@@ -197,5 +316,90 @@ export async function resumeRunExecution(
       text: result,
       ts: Date.now(),
     });
+  } else if (intent.action === "test:process" && step === "Normalize Fields") {
+    await delay(200);
+    eventBus.publish({
+      id: `evt-complete-${runId}`,
+      runId,
+      step: "Processing Complete",
+      status: "done",
+      message: "Document successfully processed",
+      ts: Date.now(),
+    });
+    
+    const result = "Document processing complete. All fields validated.";
+    addMessage({
+      id: `msg-${Date.now()}`,
+      role: "assistant",
+      text: result,
+      ts: Date.now(),
+    });
   }
+}
+
+export async function approveAndExecuteInvoice(
+  runId: string,
+  intent: any,
+  addMessage: (msg: ChatMessage) => void
+): Promise<void> {
+  eventBus.publish({
+    id: `evt-approved-${runId}`,
+    runId,
+    step: "Approval",
+    status: "done",
+    message: "User approved invoice creation",
+    ts: Date.now(),
+  });
+
+  // Smoke test "create invoice" completion
+  if (intent.action === "test:invoice") {
+    await delay(200);
+    eventBus.publish({
+      id: `evt-invoice-created-${runId}`,
+      runId,
+      step: "Invoice Created",
+      status: "done",
+      message: "Invoice INV-TEST-001 created successfully",
+      ts: Date.now(),
+    });
+    
+    addMessage({
+      id: `msg-${Date.now()}`,
+      role: "assistant",
+      text: "Invoice INV-TEST-001 created and ready for QuickBooks sync.",
+      ts: Date.now(),
+    });
+  } else {
+    // Regular invoice creation
+    const invoice = await createInvoiceMock({ docId: intent.entities.docId || "doc-001", runId });
+    const result = `Created invoice ${invoice.invoiceId} from document ${invoice.docId}. Status: ${invoice.status}.`;
+    
+    addMessage({
+      id: `msg-${Date.now()}`,
+      role: "assistant",
+      text: result,
+      ts: Date.now(),
+    });
+  }
+}
+
+export async function rejectInvoiceCreation(
+  runId: string,
+  addMessage: (msg: ChatMessage) => void
+): Promise<void> {
+  eventBus.publish({
+    id: `evt-rejected-${runId}`,
+    runId,
+    step: "Approval",
+    status: "error",
+    message: "User rejected invoice creation",
+    ts: Date.now(),
+  });
+  
+  addMessage({
+    id: `msg-${Date.now()}`,
+    role: "assistant",
+    text: "Invoice creation cancelled per your request.",
+    ts: Date.now(),
+  });
 }

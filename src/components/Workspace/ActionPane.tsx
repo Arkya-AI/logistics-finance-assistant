@@ -2,10 +2,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { eventBus } from "@/lib/eventBus";
 import { useChatStore } from "@/store/chatStore";
-import { resumeRunExecution } from "@/lib/agentHandler";
-import { createInvoiceMock } from "@/lib/stubTools";
+import { approveAndExecuteInvoice, rejectInvoiceCreation } from "@/lib/agentHandler";
 
 export function ActionPane() {
   const { pendingApproval, clearPendingApproval, addMessage } = useChatStore();
@@ -13,55 +11,26 @@ export function ActionPane() {
   const handleApprove = async () => {
     if (!pendingApproval) return;
 
-    const { runId, intent } = pendingApproval;
-
-    eventBus.publish({
-      id: `evt-approval-${Date.now()}`,
-      runId,
-      step: "Approval",
-      status: "done",
-      message: "User approved invoice creation",
-      ts: Date.now(),
-    });
-
     clearPendingApproval();
     toast.success("Invoice creation approved");
 
-    // Execute the create invoice step
-    const invoice = await createInvoiceMock({ docId: intent.entities.docId || "doc-001", runId });
-    const result = `Created invoice ${invoice.invoiceId} from document ${invoice.docId}. Status: ${invoice.status}.`;
-    
-    addMessage({
-      id: `msg-${Date.now()}`,
-      role: "assistant",
-      text: result,
-      ts: Date.now(),
-    });
+    await approveAndExecuteInvoice(
+      pendingApproval.runId,
+      pendingApproval.intent,
+      addMessage
+    );
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!pendingApproval) return;
-
-    const { runId } = pendingApproval;
-
-    eventBus.publish({
-      id: `evt-approval-${Date.now()}`,
-      runId,
-      step: "Approval",
-      status: "error",
-      message: "User rejected invoice creation",
-      ts: Date.now(),
-    });
 
     clearPendingApproval();
     toast.error("Invoice creation rejected");
 
-    addMessage({
-      id: `msg-${Date.now()}`,
-      role: "assistant",
-      text: "Invoice creation was cancelled by user.",
-      ts: Date.now(),
-    });
+    await rejectInvoiceCreation(
+      pendingApproval.runId,
+      addMessage
+    );
   };
 
   return (
