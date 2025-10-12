@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { ChatMessage, TaskEvent, CurrentDoc, TimelineEntry, ExceptionItem } from "@/types";
+import { loadState, saveState } from "@/lib/persist";
 
 interface ChatStore {
   messages: ChatMessage[];
@@ -24,24 +25,28 @@ interface ChatStore {
   clearPendingApproval: () => void;
 }
 
-export const useChatStore = create<ChatStore>((set, get) => ({
-  messages: [],
-  taskEvents: [],
-  currentDoc: {
-    docId: "doc-001",
-    emailPreviewText: "Subject: Invoice from Acme Corp\nReceived invoice #2025-001 for services rendered...",
-    attachmentName: "invoice_acme_2025.pdf",
-    parsedFields: [
-      { key: "Vendor Name", value: "Acme Corp", confidence: 0.45 },
-      { key: "Invoice Date", value: "2025-01-15", confidence: 0.92 },
-      { key: "Total Amount", value: "$1,250.00", confidence: 0.88 },
-      { key: "Due Date", value: "2025-02-15", confidence: 0.95 },
-    ],
-  },
-  timeline: [],
-  exceptions: [],
-  pausedRuns: new Map(),
-  pendingApproval: null,
+// Load persisted state
+const persistedState = loadState();
+
+export const useChatStore = create<ChatStore>((set, get) => {
+  const store = {
+    messages: persistedState?.messages || [],
+    taskEvents: persistedState?.taskEvents || [],
+    currentDoc: persistedState?.currentDoc || {
+      docId: "doc-001",
+      emailPreviewText: "Subject: Invoice from Acme Corp\nReceived invoice #2025-001 for services rendered...",
+      attachmentName: "invoice_acme_2025.pdf",
+      parsedFields: [
+        { key: "Vendor Name", value: "Acme Corp", confidence: 0.45 },
+        { key: "Invoice Date", value: "2025-01-15", confidence: 0.92 },
+        { key: "Total Amount", value: "$1,250.00", confidence: 0.88 },
+        { key: "Due Date", value: "2025-02-15", confidence: 0.95 },
+      ],
+    },
+    timeline: persistedState?.timeline || [],
+    exceptions: persistedState?.exceptions || [],
+    pausedRuns: new Map(),
+    pendingApproval: null,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -117,4 +122,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   clearPendingApproval: () =>
     set({ pendingApproval: null }),
-}));
+  };
+
+  // Subscribe to changes and persist relevant slices
+  const persistRelevantState = () => {
+    const state = get();
+    saveState({
+      messages: state.messages,
+      taskEvents: state.taskEvents,
+      currentDoc: state.currentDoc,
+      exceptions: state.exceptions,
+      timeline: state.timeline,
+    });
+  };
+
+  // Set up subscription after store creation
+  setTimeout(() => {
+    useChatStore.subscribe(persistRelevantState);
+  }, 0);
+
+  return store;
+});
