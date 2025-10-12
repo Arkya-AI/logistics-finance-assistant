@@ -5,17 +5,35 @@ import { useChatStore } from "@/store/chatStore";
 import { File } from "lucide-react";
 import { addTimelineEntry, TOOL_LABELS } from "@/lib/timelineHelper";
 import { getActiveRunId } from "@/lib/runIdHelper";
+import { eventBus } from "@/lib/eventBus";
 
 export function DocViewer() {
   const { currentDoc, updateDocField } = useChatStore();
 
   const handleFieldEdit = (fieldKey: string, newValue: string) => {
     updateDocField(fieldKey, newValue);
+    
+    const runId = getActiveRunId();
+    const ts = Date.now();
+    const message = `Updated ${fieldKey} -> ${newValue}`;
+    
+    // Publish TaskEvent
+    eventBus.publish({
+      id: `evt-edit-${Date.now()}`,
+      runId,
+      step: "User Edit",
+      status: "done",
+      message,
+      ts,
+    });
+    
+    // Add timeline entry
     addTimelineEntry({
-      runId: getActiveRunId(),
+      runId,
       tool: TOOL_LABELS.USER_EDIT,
       status: "done",
-      message: `User edited ${fieldKey}`,
+      message,
+      ts,
     });
   };
 
