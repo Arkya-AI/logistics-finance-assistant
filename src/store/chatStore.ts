@@ -14,6 +14,7 @@ interface ChatStore {
   pendingApproval: { runId: string; intent: any; step: string } | null;
   runState: RunState;
   isResuming: boolean;
+  activeRunId: string | null;
   
   addMessage: (message: ChatMessage) => void;
   addTaskEvent: (event: TaskEvent) => void;
@@ -29,6 +30,7 @@ interface ChatStore {
   clearPendingApproval: () => void;
   setRunState: (state: RunState) => void;
   setIsResuming: (isResuming: boolean) => void;
+  setActiveRunId: (runId: string | null) => void;
 }
 
 // Load persisted state
@@ -55,6 +57,7 @@ export const useChatStore = create<ChatStore>((set, get) => {
     pendingApproval: null,
     runState: 'idle' as RunState,
     isResuming: false,
+    activeRunId: null,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -142,6 +145,9 @@ export const useChatStore = create<ChatStore>((set, get) => {
 
   setIsResuming: (isResuming) =>
     set({ isResuming }),
+
+  setActiveRunId: (activeRunId) =>
+    set({ activeRunId }),
   };
 
   // Subscribe to changes and persist relevant slices

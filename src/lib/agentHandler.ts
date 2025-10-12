@@ -1,6 +1,7 @@
 import { ChatMessage, TaskEvent } from "@/types";
 import { eventBus } from "./eventBus";
 import { addTimelineEntry, TOOL_LABELS } from "./timelineHelper";
+import { generateRunId } from "./runIdHelper";
 import {
   ingestEmailMock,
   runOcrMock,
@@ -10,12 +11,6 @@ import {
   sendReminderMock,
   exportWeeklyMock,
 } from "./stubTools";
-
-let runIdCounter = 0;
-
-function generateRunId(): string {
-  return `run-${Date.now()}-${runIdCounter++}`;
-}
 
 interface Intent {
   action: string;
@@ -265,9 +260,11 @@ export async function handleUserMessage(
   addMessage: (msg: ChatMessage) => void,
   addException: any,
   pauseRun: any,
-  setPendingApproval: any
+  setPendingApproval: any,
+  setActiveRunId: any
 ): Promise<void> {
   const runId = generateRunId();
+  setActiveRunId(runId);
   const intent = parseIntent(text);
 
   // Handle unknown intent

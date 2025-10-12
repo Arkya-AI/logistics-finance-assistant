@@ -4,6 +4,7 @@ import { ConfidenceBadge } from "@/components/Badge";
 import { useChatStore } from "@/store/chatStore";
 import { File } from "lucide-react";
 import { addTimelineEntry, TOOL_LABELS } from "@/lib/timelineHelper";
+import { getActiveRunId } from "@/lib/runIdHelper";
 
 export function DocViewer() {
   const { currentDoc, updateDocField } = useChatStore();
@@ -11,7 +12,7 @@ export function DocViewer() {
   const handleFieldEdit = (fieldKey: string, newValue: string) => {
     updateDocField(fieldKey, newValue);
     addTimelineEntry({
-      runId: currentDoc?.docId || "manual",
+      runId: getActiveRunId(),
       tool: TOOL_LABELS.USER_EDIT,
       status: "done",
       message: `User edited ${fieldKey}`,
