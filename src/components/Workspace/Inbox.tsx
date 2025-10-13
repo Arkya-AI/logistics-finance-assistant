@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { messagesDAL, filesDAL } from "@/lib/dal";
+import { messagesDAL, filesDAL, invoicesDAL } from "@/lib/dal";
 import { scanGmailInvoices, getGmailConfig } from "@/lib/gmail";
-import type { Message, File } from "@/types/database";
-import { FileText, RefreshCw } from "lucide-react";
+import { processInvoice } from "@/lib/orchestrator";
+import type { Message, File, Invoice } from "@/types/database";
+import { FileText, RefreshCw, Download, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useChatStore } from "@/store/chatStore";
+import { supabase } from "@/integrations/supabase/client";
 
 export function Inbox() {
-  const [messages, setMessages] = useState<(Message & { files?: File[] })[]>([]);
+  const [messages, setMessages] = useState<(Message & { files?: (File & { invoice?: Invoice })[] })[]>([]);
   const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState<Set<string>>(new Set());
   const [gmailConnected, setGmailConnected] = useState(false);
   const { toast } = useToast();
+  const { autoProcess } = useChatStore();
 
   useEffect(() => {
     loadMessages();
@@ -36,7 +41,17 @@ export function Inbox() {
       const msgsWithFiles = await Promise.all(
         msgs.map(async (msg) => {
           const files = await filesDAL.getByMessageId(msg.id);
-          return { ...msg, files };
+          
+          // Load invoice data for each file
+          const filesWithInvoice = await Promise.all(
+            files.map(async (file) => {
+              const invoices = await invoicesDAL.getAll();
+              const invoice = invoices.find(inv => inv.file_id === file.id);
+              return { ...file, invoice };
+            })
+          );
+
+          return { ...msg, files: filesWithInvoice };
         })
       );
 
@@ -74,12 +89,66 @@ export function Inbox() {
     }
   }
 
-  function handleOcrExtract(fileId: string, filename: string) {
+  async function handleProcess(fileId: string, filename: string) {
+    setProcessing(prev => new Set(prev).add(fileId));
     toast({
-      title: "OCR+Extract",
-      description: `Starting extraction for ${filename}`,
+      title: "Processing Invoice",
+      description: `Starting processing for ${filename}`,
     });
-    // TODO: Implement actual OCR extraction
+
+    try {
+      await processInvoice(fileId);
+      toast({
+        title: "Success",
+        description: `Invoice processed successfully`,
+      });
+      await loadMessages();
+    } catch (error) {
+      console.error("Error processing invoice:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Processing failed",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(prev => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+    }
+  }
+
+  async function downloadExport(fileId: string, type: "csv" | "json", filename: string) {
+    try {
+      const path = `${fileId}/invoice.${type}`;
+      const { data, error } = await supabase.storage
+        .from("exports")
+        .download(path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename.replace(/\.[^/.]+$/, "")}_invoice.${type}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${type.toUpperCase()} export`,
+      });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({
+        title: "Error",
+        description: `Failed to download ${type.toUpperCase()}`,
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -141,16 +210,49 @@ export function Inbox() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      {msg.files?.map((file) => (
-                        <Button
-                          key={file.id}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOcrExtract(file.id, file.filename)}
-                        >
-                          OCR+Extract
-                        </Button>
-                      ))}
+                      {msg.files?.map((file) => {
+                        const isProcessing = processing.has(file.id);
+                        const hasInvoice = !!file.invoice;
+
+                        return (
+                          <div key={file.id} className="flex items-center gap-2">
+                            {!hasInvoice && !autoProcess && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleProcess(file.id, file.filename)}
+                                disabled={isProcessing}
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                {isProcessing ? "Processing..." : "Process"}
+                              </Button>
+                            )}
+                            {hasInvoice && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => downloadExport(file.id, "csv", file.filename)}
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  CSV
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => downloadExport(file.id, "json", file.filename)}
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  JSON
+                                </Button>
+                              </>
+                            )}
+                            {autoProcess && !hasInvoice && isProcessing && (
+                              <span className="text-sm text-muted-foreground">Processing...</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1,0 +1,50 @@
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useChatStore } from "@/store/chatStore";
+import { Settings as SettingsIcon } from "lucide-react";
+
+export function Settings() {
+  const { autoProcess, toggleAutoProcess } = useChatStore();
+
+  return (
+    <div className="flex h-full flex-col p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <SettingsIcon className="h-5 w-5" />
+        <h2 className="text-2xl font-bold">Settings</h2>
+      </div>
+
+      <div className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <div>
+            <h3 className="font-semibold mb-2">Processing</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Configure how invoices are processed
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="auto-process">Auto-Process Invoices</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically process files when uploaded or received via Gmail
+              </p>
+            </div>
+            <Switch
+              id="auto-process"
+              checked={autoProcess}
+              onCheckedChange={toggleAutoProcess}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-lg border p-4 bg-muted/50">
+          <p className="text-sm text-muted-foreground">
+            {autoProcess
+              ? "✓ Files will be automatically processed through OCR, structuring, and validation"
+              : "⚠️ Files will require manual processing via the 'Process' button"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

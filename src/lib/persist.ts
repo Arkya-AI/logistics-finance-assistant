@@ -9,6 +9,7 @@ interface PersistedState {
   currentDoc: any | null;
   exceptions: any[];
   timeline: any[];
+  autoProcess: boolean;
 }
 
 let saveTimeout: NodeJS.Timeout | null = null;
@@ -27,6 +28,7 @@ export const saveState = (state: Partial<PersistedState>) => {
         currentDoc: state.currentDoc || null,
         exceptions: state.exceptions || [],
         timeline: state.timeline || [],
+        autoProcess: state.autoProcess ?? true,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
     } catch (error) {
@@ -55,6 +57,7 @@ export const loadState = (): Partial<PersistedState> | null => {
       currentDoc: parsed.currentDoc || null,
       exceptions: parsed.exceptions || [],
       timeline: parsed.timeline || [],
+      autoProcess: parsed.autoProcess ?? true,
     };
   } catch (error) {
     console.error("Failed to load persisted state:", error);

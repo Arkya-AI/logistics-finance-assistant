@@ -17,6 +17,7 @@ interface ChatStore {
   activeRunId: string | null;
   devErrorsEnabled: boolean;
   lastFailedStep: { runId: string; step: string; tool: string } | null;
+  autoProcess: boolean;
   
   addMessage: (message: ChatMessage) => void;
   addTaskEvent: (event: TaskEvent) => void;
@@ -35,6 +36,7 @@ interface ChatStore {
   setActiveRunId: (runId: string | null) => void;
   toggleDevErrors: () => void;
   setLastFailedStep: (step: { runId: string; step: string; tool: string } | null) => void;
+  toggleAutoProcess: () => void;
 }
 
 // Load persisted state
@@ -64,6 +66,7 @@ export const useChatStore = create<ChatStore>((set, get) => {
     activeRunId: null,
     devErrorsEnabled: false,
     lastFailedStep: null,
+    autoProcess: persistedState?.autoProcess ?? true,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -160,6 +163,9 @@ export const useChatStore = create<ChatStore>((set, get) => {
 
   setLastFailedStep: (lastFailedStep) =>
     set({ lastFailedStep }),
+
+  toggleAutoProcess: () =>
+    set((state) => ({ autoProcess: !state.autoProcess })),
   };
 
   // Subscribe to changes and persist relevant slices
@@ -171,6 +177,7 @@ export const useChatStore = create<ChatStore>((set, get) => {
       currentDoc: state.currentDoc,
       exceptions: state.exceptions,
       timeline: state.timeline,
+      autoProcess: state.autoProcess,
     });
   };
 

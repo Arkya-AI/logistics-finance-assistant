@@ -6,6 +6,7 @@ import { ActionPane } from "./ActionPane";
 import { Timeline } from "./Timeline";
 import { Exceptions } from "./Exceptions";
 import { Inbox } from "./Inbox";
+import { Settings } from "./Settings";
 
 export function WorkspaceTabs() {
   const [activeTab, setActiveTab] = useState("inbox");
@@ -21,6 +22,7 @@ export function WorkspaceTabs() {
             <TabsTrigger value="actions">Actions</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="exceptions">Exceptions</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
         </div>
 
@@ -42,6 +44,9 @@ export function WorkspaceTabs() {
           </TabsContent>
           <TabsContent value="exceptions" className="h-full m-0">
             <Exceptions />
+          </TabsContent>
+          <TabsContent value="settings" className="h-full m-0">
+            <Settings />
           </TabsContent>
         </div>
       </Tabs>
