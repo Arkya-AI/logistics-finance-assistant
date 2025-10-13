@@ -14,7 +14,263 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      extractions: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          file_id: string
+          gpt_json_ref: string | null
+          id: string
+          method: string | null
+          ocr_json_ref: string | null
+          raw_text_ref: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          file_id: string
+          gpt_json_ref?: string | null
+          id?: string
+          method?: string | null
+          ocr_json_ref?: string | null
+          raw_text_ref?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          file_id?: string
+          gpt_json_ref?: string | null
+          id?: string
+          method?: string | null
+          ocr_json_ref?: string | null
+          raw_text_ref?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extractions_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      files: {
+        Row: {
+          blob_ref: string
+          created_at: string | null
+          filename: string
+          id: string
+          message_id: string | null
+          mime: string
+          pages: number | null
+          sha256: string
+          source: string
+        }
+        Insert: {
+          blob_ref: string
+          created_at?: string | null
+          filename: string
+          id?: string
+          message_id?: string | null
+          mime: string
+          pages?: number | null
+          sha256: string
+          source: string
+        }
+        Update: {
+          blob_ref?: string
+          created_at?: string | null
+          filename?: string
+          id?: string
+          message_id?: string | null
+          mime?: string
+          pages?: number | null
+          sha256?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gmail_config: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          email: string
+          id: string
+          refresh_token: string | null
+          token_expiry: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          email: string
+          id?: string
+          refresh_token?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          refresh_token?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoice_line_items: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          invoice_id: string
+          quantity: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          invoice_id: string
+          quantity?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          quantity?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          bill_to: string | null
+          confidence: number | null
+          created_at: string | null
+          currency: string | null
+          doctype: string | null
+          due_date: string | null
+          file_id: string
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          po_number: string | null
+          subtotal: number | null
+          tax: number | null
+          total: number | null
+          vendor_name: string | null
+        }
+        Insert: {
+          bill_to?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          currency?: string | null
+          doctype?: string | null
+          due_date?: string | null
+          file_id: string
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          po_number?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          total?: number | null
+          vendor_name?: string | null
+        }
+        Update: {
+          bill_to?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          currency?: string | null
+          doctype?: string | null
+          due_date?: string | null
+          file_id?: string
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          po_number?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          total?: number | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          created_at: string | null
+          from: string
+          gmail_id: string
+          has_invoice: boolean | null
+          id: string
+          received_at: string
+          subject: string
+          thread_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from: string
+          gmail_id: string
+          has_invoice?: boolean | null
+          id?: string
+          received_at: string
+          subject: string
+          thread_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from?: string
+          gmail_id?: string
+          has_invoice?: boolean | null
+          id?: string
+          received_at?: string
+          subject?: string
+          thread_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
