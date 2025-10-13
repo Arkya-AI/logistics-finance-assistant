@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { eventBus } from "./eventBus";
 import { TaskEvent, TaskStatus } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { ocrWithGoogle } from "./gcv";
+import { structureInvoiceWithGPT } from "./structure";
 
 function emitTaskEvent(runId: string, step: string, status: TaskStatus, message: string, ref?: string) {
   const event: TaskEvent = {
@@ -16,24 +18,29 @@ function emitTaskEvent(runId: string, step: string, status: TaskStatus, message:
   eventBus.publish(event);
 }
 
+interface InvoiceHeader {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string | null;
+  vendorName: string;
+  billTo: string | null;
+  poNumber: string | null;
+  currency: string;
+  subtotal: number | null;
+  tax: number | null;
+  total: number;
+}
+
+interface InvoiceLineItem {
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  amount: number;
+}
+
 interface StructuredInvoice {
-  doctype?: string;
-  invoiceNumber?: string;
-  invoiceDate?: string;
-  dueDate?: string;
-  vendorName?: string;
-  billTo?: string;
-  poNumber?: string;
-  currency?: string;
-  subtotal?: number;
-  tax?: number;
-  total?: number;
-  lineItems?: Array<{
-    description?: string;
-    quantity?: number;
-    unitPrice?: number;
-    amount?: number;
-  }>;
+  header: InvoiceHeader;
+  lineItems: InvoiceLineItem[];
 }
 
 const VALID_CURRENCIES = ["USD", "AED", "INR", "SGD"];
@@ -71,17 +78,16 @@ export async function processInvoice(fileId: string, runId?: string) {
     }
 
     // Step 2: OCR with Google Vision
-    emitTaskEvent(effectiveRunId, "ocr", "running", "Running OCR...");
+    emitTaskEvent(effectiveRunId, "ocr", "running", "Running OCR with Google Vision...");
 
-    const { data: ocrData, error: ocrError } = await supabase.functions.invoke(
-      "ocr-extract",
-      {
-        body: { fileId, blobRef: file.blob_ref },
-      }
-    );
-
-    if (ocrError) throw new Error(`OCR failed: ${ocrError.message}`);
-    const rawText = ocrData?.text || "";
+    let rawText: string;
+    try {
+      rawText = await ocrWithGoogle(fileId);
+      emitTaskEvent(effectiveRunId, "ocr", "done", `Extracted ${rawText.length} characters`);
+    } catch (error) {
+      emitTaskEvent(effectiveRunId, "ocr", "error", error instanceof Error ? error.message : "OCR failed");
+      throw error;
+    }
 
     // Save extraction record
     const { data: extraction, error: extractionError } = await supabase
@@ -98,65 +104,45 @@ export async function processInvoice(fileId: string, runId?: string) {
     if (extractionError) throw extractionError;
 
     // Step 3: Structure with GPT-5
-    emitTaskEvent(effectiveRunId, "structure", "running", "Structuring with AI...");
+    emitTaskEvent(effectiveRunId, "structure", "running", "Structuring with GPT-5...");
 
-    const { data: gptData, error: gptError } = await supabase.functions.invoke(
-      "structure-invoice",
-      {
-        body: { text: rawText },
-      }
-    );
-
-    if (gptError) throw new Error(`Structuring failed: ${gptError.message}`);
-    const structured: StructuredInvoice = gptData?.invoice || {};
-
-    // Update extraction with GPT JSON
-    await supabase
-      .from("extractions")
-      .update({
-        gpt_json_ref: JSON.stringify(structured),
-        status: "completed",
-      })
-      .eq("id", extraction.id);
+    let structured: StructuredInvoice;
+    try {
+      structured = await structureInvoiceWithGPT(extraction.id, rawText);
+      emitTaskEvent(effectiveRunId, "structure", "done", "Invoice structured successfully");
+    } catch (error) {
+      emitTaskEvent(effectiveRunId, "structure", "error", error instanceof Error ? error.message : "Structuring failed");
+      throw error;
+    }
 
     // Step 4: Validate and score
-    emitTaskEvent(effectiveRunId, "validate", "running", "Validating...");
+    emitTaskEvent(effectiveRunId, "validate", "running", "Validating invoice...");
 
     let score = 0;
+    const { header, lineItems } = structured;
 
     // +0.25 for invoiceNumber
-    if (structured.invoiceNumber && structured.invoiceNumber.trim()) {
+    if (header.invoiceNumber && header.invoiceNumber.trim()) {
       score += 0.25;
     }
 
     // +0.25 for total > 0
-    if (structured.total && structured.total > 0) {
+    if (header.total && header.total > 0) {
       score += 0.25;
     }
 
     // +0.25 for line items sum matching total (within 2%)
-    if (
-      structured.lineItems &&
-      structured.lineItems.length > 0 &&
-      structured.total
-    ) {
-      const lineSum = structured.lineItems.reduce(
-        (sum, item) => sum + (item.amount || 0),
-        0
-      );
-      const diff = Math.abs(lineSum - structured.total);
-      const tolerance = structured.total * 0.02;
+    if (lineItems && lineItems.length > 0 && header.total) {
+      const lineSum = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const diff = Math.abs(lineSum - header.total);
+      const tolerance = header.total * 0.02;
       if (diff <= tolerance) {
         score += 0.25;
       }
     }
 
     // +0.25 for valid invoiceDate and currency
-    if (
-      structured.invoiceDate &&
-      structured.currency &&
-      VALID_CURRENCIES.includes(structured.currency)
-    ) {
+    if (header.invoiceDate && header.currency && VALID_CURRENCIES.includes(header.currency)) {
       score += 0.25;
     }
 
@@ -166,36 +152,37 @@ export async function processInvoice(fileId: string, runId?: string) {
     if (isPaused) {
       // Create exceptions
       const exceptions: string[] = [];
-      if (!structured.invoiceNumber) exceptions.push("Missing invoice number");
-      if (!structured.total || structured.total <= 0)
-        exceptions.push("Invalid total");
-      if (!structured.invoiceDate) exceptions.push("Missing invoice date");
-      if (!structured.currency || !VALID_CURRENCIES.includes(structured.currency))
+      if (!header.invoiceNumber) exceptions.push("Missing invoice number");
+      if (!header.total || header.total <= 0) exceptions.push("Invalid total");
+      if (!header.invoiceDate) exceptions.push("Missing invoice date");
+      if (!header.currency || !VALID_CURRENCIES.includes(header.currency))
         exceptions.push("Invalid currency");
 
       emitTaskEvent(effectiveRunId, "validate", "error", `Validation failed (score: ${score}). Paused.`);
       return { paused: true, score, exceptions };
     }
 
+    emitTaskEvent(effectiveRunId, "validate", "done", `Validation passed (score: ${score})`);
+
     // Step 5: Ingest (idempotent upsert)
-    emitTaskEvent(effectiveRunId, "ingest", "running", "Saving invoice...");
+    emitTaskEvent(effectiveRunId, "ingest", "running", "Saving invoice to database...");
 
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .upsert(
         {
           file_id: fileId,
-          doctype: structured.doctype || null,
-          invoice_number: structured.invoiceNumber || null,
-          invoice_date: structured.invoiceDate || null,
-          due_date: structured.dueDate || null,
-          vendor_name: structured.vendorName || null,
-          bill_to: structured.billTo || null,
-          po_number: structured.poNumber || null,
-          currency: structured.currency || "USD",
-          subtotal: structured.subtotal || null,
-          tax: structured.tax || null,
-          total: structured.total || null,
+          doctype: null,
+          invoice_number: header.invoiceNumber || null,
+          invoice_date: header.invoiceDate || null,
+          due_date: header.dueDate || null,
+          vendor_name: header.vendorName || null,
+          bill_to: header.billTo || null,
+          po_number: header.poNumber || null,
+          currency: header.currency || "USD",
+          subtotal: header.subtotal || null,
+          tax: header.tax || null,
+          total: header.total || null,
           confidence: score,
         },
         { onConflict: "file_id" }
@@ -206,8 +193,8 @@ export async function processInvoice(fileId: string, runId?: string) {
     if (invoiceError) throw invoiceError;
 
     // Insert line items
-    if (structured.lineItems && structured.lineItems.length > 0) {
-      const lineItems = structured.lineItems.map((item) => ({
+    if (lineItems && lineItems.length > 0) {
+      const lineItemRecords = lineItems.map((item) => ({
         invoice_id: invoice.id,
         description: item.description || null,
         quantity: item.quantity || null,
@@ -215,19 +202,61 @@ export async function processInvoice(fileId: string, runId?: string) {
         amount: item.amount || null,
       }));
 
-      await supabase.from("invoice_line_items").insert(lineItems);
+      await supabase.from("invoice_line_items").insert(lineItemRecords);
     }
 
+    emitTaskEvent(effectiveRunId, "ingest", "done", "Invoice saved successfully");
+
     // Step 6: Export CSV & JSON
-    emitTaskEvent(effectiveRunId, "export", "running", "Exporting...");
+    emitTaskEvent(effectiveRunId, "export", "running", "Exporting CSV & JSON...");
 
-    const csvLink = `/exports/${fileId}/invoice.csv`;
-    const jsonLink = `/exports/${fileId}/invoice.json`;
+    try {
+      // Generate CSV
+      const csvHeader = "Field,Value\n";
+      const csvRows = [
+        `Invoice Number,${header.invoiceNumber}`,
+        `Invoice Date,${header.invoiceDate}`,
+        `Due Date,${header.dueDate || "N/A"}`,
+        `Vendor,${header.vendorName}`,
+        `Bill To,${header.billTo || "N/A"}`,
+        `PO Number,${header.poNumber || "N/A"}`,
+        `Currency,${header.currency}`,
+        `Subtotal,${header.subtotal || "N/A"}`,
+        `Tax,${header.tax || "N/A"}`,
+        `Total,${header.total}`,
+      ].join("\n");
+      const csvContent = csvHeader + csvRows;
 
-    // Step 7: Route file (placeholder - would move blob in storage)
-    // Move to /verified/ or /exceptions/
+      // Generate JSON
+      const jsonContent = JSON.stringify({ invoice, lineItems }, null, 2);
 
-    emitTaskEvent(effectiveRunId, "export", "done", `Processed successfully. CSV & JSON exported.`, csvLink);
+      // Upload to storage
+      const csvPath = `${fileId}/invoice.csv`;
+      const jsonPath = `${fileId}/invoice.json`;
+
+      await Promise.all([
+        supabase.storage
+          .from("exports")
+          .upload(csvPath, new Blob([csvContent], { type: "text/csv" }), {
+            upsert: true,
+            contentType: "text/csv",
+          }),
+        supabase.storage
+          .from("exports")
+          .upload(jsonPath, new Blob([jsonContent], { type: "application/json" }), {
+            upsert: true,
+            contentType: "application/json",
+          }),
+      ]);
+
+      const { data: csvUrl } = supabase.storage.from("exports").getPublicUrl(csvPath);
+      const { data: jsonUrl } = supabase.storage.from("exports").getPublicUrl(jsonPath);
+
+      emitTaskEvent(effectiveRunId, "export", "done", `Exports available at CSV & JSON`, csvUrl.publicUrl);
+    } catch (error) {
+      emitTaskEvent(effectiveRunId, "export", "error", error instanceof Error ? error.message : "Export failed");
+      throw error;
+    }
 
     return { success: true, invoiceId: invoice.id };
   } catch (error) {
