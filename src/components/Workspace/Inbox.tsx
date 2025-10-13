@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { messagesDAL, filesDAL, invoicesDAL } from "@/lib/dal";
-import { scanGmailInvoices, getGmailConfig } from "@/lib/gmail";
+import { scanGmailInvoices, getGmailConfig, initiateGmailOAuth } from "@/lib/gmail";
 import { processInvoice } from "@/lib/orchestrator";
 import type { Message, File, Invoice } from "@/types/database";
 import { FileText, RefreshCw, Download, Play } from "lucide-react";
@@ -65,6 +65,24 @@ export function Inbox() {
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleConnectGmail() {
+    try {
+      const { authUrl } = await initiateGmailOAuth();
+      window.open(authUrl, "_blank");
+      toast({
+        title: "Gmail OAuth",
+        description: "Please complete authentication in the new window",
+      });
+    } catch (error) {
+      console.error("Error initiating Gmail OAuth:", error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate Gmail connection",
+        variant: "destructive",
+      });
     }
   }
 
@@ -157,7 +175,7 @@ export function Inbox() {
         <h2 className="text-2xl font-bold">Inbox</h2>
         <div className="flex gap-2">
           {!gmailConnected && (
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleConnectGmail}>
               Connect Gmail
             </Button>
           )}
