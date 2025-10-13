@@ -1,1 +1,13 @@
 project_id = "fsnjwooppfqmiszxfidn"
+
+[functions.gmail-auth]
+verify_jwt = false
+
+[functions.gmail-scan]
+verify_jwt = false
+
+[functions.ocr-extract]
+verify_jwt = false
+
+[functions.structure-invoice]
+verify_jwt = false
