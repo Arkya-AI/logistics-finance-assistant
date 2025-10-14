@@ -29,7 +29,23 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { action, code, userId } = await req.json();
+    const url = new URL(req.url);
+    let action: string | undefined;
+    let code: string | null = null;
+    let userId: string | undefined;
+
+    if (req.method === "GET") {
+      // Handle Google OAuth redirect (GET /gmail-auth?code=...&state=...)
+      code = url.searchParams.get("code");
+      userId = url.searchParams.get("state") || undefined;
+      if (code) action = "callback";
+    } else {
+      // Handle JSON body from client-initiated actions
+      const body = await req.json().catch(() => ({} as any));
+      action = body.action;
+      code = body.code ?? null;
+      userId = body.userId;
+    }
 
     if (action === "initiate") {
       const scopes = [
