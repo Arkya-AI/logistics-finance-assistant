@@ -26,6 +26,7 @@ export type Database = {
           ocr_json_ref: string | null
           raw_text_ref: string | null
           status: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -38,6 +39,7 @@ export type Database = {
           ocr_json_ref?: string | null
           raw_text_ref?: string | null
           status?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           ocr_json_ref?: string | null
           raw_text_ref?: string | null
           status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -72,6 +75,7 @@ export type Database = {
           pages: number | null
           sha256: string
           source: string
+          user_id: string | null
         }
         Insert: {
           blob_ref: string
@@ -83,6 +87,7 @@ export type Database = {
           pages?: number | null
           sha256: string
           source: string
+          user_id?: string | null
         }
         Update: {
           blob_ref?: string
@@ -94,6 +99,7 @@ export type Database = {
           pages?: number | null
           sha256?: string
           source?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -147,6 +153,7 @@ export type Database = {
           invoice_id: string
           quantity: number | null
           unit_price: number | null
+          user_id: string | null
         }
         Insert: {
           amount?: number | null
@@ -156,6 +163,7 @@ export type Database = {
           invoice_id: string
           quantity?: number | null
           unit_price?: number | null
+          user_id?: string | null
         }
         Update: {
           amount?: number | null
@@ -165,6 +173,7 @@ export type Database = {
           invoice_id?: string
           quantity?: number | null
           unit_price?: number | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -192,6 +201,7 @@ export type Database = {
           subtotal: number | null
           tax: number | null
           total: number | null
+          user_id: string | null
           vendor_name: string | null
         }
         Insert: {
@@ -209,6 +219,7 @@ export type Database = {
           subtotal?: number | null
           tax?: number | null
           total?: number | null
+          user_id?: string | null
           vendor_name?: string | null
         }
         Update: {
@@ -226,6 +237,7 @@ export type Database = {
           subtotal?: number | null
           tax?: number | null
           total?: number | null
+          user_id?: string | null
           vendor_name?: string | null
         }
         Relationships: [
@@ -248,6 +260,7 @@ export type Database = {
           received_at: string
           subject: string
           thread_id: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -258,6 +271,7 @@ export type Database = {
           received_at: string
           subject: string
           thread_id?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -268,6 +282,7 @@ export type Database = {
           received_at?: string
           subject?: string
           thread_id?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
