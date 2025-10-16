@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      exports: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          file_path: string
+          id: string
+          invoice_id: string | null
+          signed_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          file_path: string
+          id?: string
+          invoice_id?: string | null
+          signed_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          file_path?: string
+          id?: string
+          invoice_id?: string | null
+          signed_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       extractions: {
         Row: {
           created_at: string | null

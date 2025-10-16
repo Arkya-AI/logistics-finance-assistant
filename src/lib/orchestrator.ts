@@ -249,10 +249,41 @@ export async function processInvoice(fileId: string, runId?: string) {
           }),
       ]);
 
-      const { data: csvUrl } = supabase.storage.from("exports").getPublicUrl(csvPath);
-      const { data: jsonUrl } = supabase.storage.from("exports").getPublicUrl(jsonPath);
+      // Generate signed URLs valid for 24 hours
+      const expiresIn = 24 * 60 * 60; // 24 hours in seconds
+      const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
-      emitTaskEvent(effectiveRunId, "export", "done", `Exports available at CSV & JSON`, csvUrl.publicUrl);
+      const { data: csvSignedUrl } = await supabase.storage
+        .from("exports")
+        .createSignedUrl(csvPath, expiresIn);
+
+      const { data: jsonSignedUrl } = await supabase.storage
+        .from("exports")
+        .createSignedUrl(jsonPath, expiresIn);
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Store export records with signed URLs
+      await Promise.all([
+        supabase.from("exports").insert({
+          user_id: user.id,
+          invoice_id: invoice.id,
+          file_path: csvPath,
+          signed_url: csvSignedUrl?.signedUrl,
+          expires_at: expiresAt.toISOString(),
+        }),
+        supabase.from("exports").insert({
+          user_id: user.id,
+          invoice_id: invoice.id,
+          file_path: jsonPath,
+          signed_url: jsonSignedUrl?.signedUrl,
+          expires_at: expiresAt.toISOString(),
+        }),
+      ]);
+
+      emitTaskEvent(effectiveRunId, "export", "done", `Secure exports generated (valid 24h)`, csvSignedUrl?.signedUrl);
     } catch (error) {
       emitTaskEvent(effectiveRunId, "export", "error", error instanceof Error ? error.message : "Export failed");
       throw error;

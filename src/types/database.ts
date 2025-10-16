@@ -74,3 +74,13 @@ export interface GmailConfig {
   created_at: string;
   updated_at: string;
 }
+
+export interface Export {
+  id: string;
+  user_id: string;
+  invoice_id?: string;
+  file_path: string;
+  signed_url?: string;
+  expires_at?: string;
+  created_at: string;
+}

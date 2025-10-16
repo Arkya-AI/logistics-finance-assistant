@@ -1,6 +1,6 @@
 // Data Access Layer for database operations
 import { supabase } from "@/integrations/supabase/client";
-import type { Message, File, Invoice, InvoiceLineItem, Extraction } from "@/types/database";
+import type { Message, File, Invoice, InvoiceLineItem, Extraction, Export } from "@/types/database";
 
 // Messages DAL
 export const messagesDAL = {
@@ -167,5 +167,52 @@ export const extractionsDAL = {
       .eq("file_id", fileId);
     if (error) throw error;
     return data as Extraction[];
+  },
+};
+
+// Exports DAL
+export const exportsDAL = {
+  async getByInvoiceId(invoiceId: string) {
+    const { data, error } = await supabase
+      .from("exports")
+      .select("*")
+      .eq("invoice_id", invoiceId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data as Export[];
+  },
+
+  async regenerateSignedUrl(exportId: string) {
+    // Get the export record
+    const { data: exportRecord, error: fetchError } = await supabase
+      .from("exports")
+      .select("*")
+      .eq("id", exportId)
+      .single();
+    if (fetchError) throw fetchError;
+
+    const exp = exportRecord as Export;
+    
+    // Generate new signed URL valid for 24 hours
+    const expiresIn = 24 * 60 * 60;
+    const { data: signedUrl, error: urlError } = await supabase.storage
+      .from("exports")
+      .createSignedUrl(exp.file_path, expiresIn);
+    if (urlError) throw urlError;
+
+    // Update the export record
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+    const { data, error: updateError } = await supabase
+      .from("exports")
+      .update({
+        signed_url: signedUrl?.signedUrl,
+        expires_at: expiresAt.toISOString(),
+      })
+      .eq("id", exportId)
+      .select()
+      .single();
+    if (updateError) throw updateError;
+
+    return data as Export;
   },
 };
