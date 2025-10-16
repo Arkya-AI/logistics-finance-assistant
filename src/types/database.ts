@@ -2,6 +2,7 @@
 
 export interface Message {
   id: string;
+  user_id?: string;
   gmail_id: string;
   thread_id?: string;
   from: string;
@@ -13,6 +14,7 @@ export interface Message {
 
 export interface File {
   id: string;
+  user_id?: string;
   message_id?: string;
   filename: string;
   mime: string;
@@ -25,6 +27,7 @@ export interface File {
 
 export interface Invoice {
   id: string;
+  user_id?: string;
   file_id: string;
   doctype?: string;
   invoice_number?: string;
@@ -43,6 +46,7 @@ export interface Invoice {
 
 export interface InvoiceLineItem {
   id: string;
+  user_id?: string;
   invoice_id: string;
   description?: string;
   quantity?: number;
@@ -53,6 +57,7 @@ export interface InvoiceLineItem {
 
 export interface Extraction {
   id: string;
+  user_id?: string;
   file_id: string;
   raw_text_ref?: string;
   ocr_json_ref?: string;

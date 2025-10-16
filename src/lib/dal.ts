@@ -4,10 +4,13 @@ import type { Message, File, Invoice, InvoiceLineItem, Extraction, Export } from
 
 // Messages DAL
 export const messagesDAL = {
-  async create(data: Omit<Message, "id" | "created_at">) {
+  async create(data: Omit<Message, "id" | "created_at" | "user_id">) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data: result, error } = await supabase
       .from("messages")
-      .insert(data)
+      .insert({ ...data, user_id: user.id })
       .select()
       .single();
     if (error) throw error;
@@ -36,10 +39,13 @@ export const messagesDAL = {
 
 // Files DAL
 export const filesDAL = {
-  async create(data: Omit<File, "id" | "created_at">) {
+  async create(data: Omit<File, "id" | "created_at" | "user_id">) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data: result, error } = await supabase
       .from("files")
-      .insert(data)
+      .insert({ ...data, user_id: user.id })
       .select()
       .single();
     if (error) throw error;
@@ -77,10 +83,13 @@ export const filesDAL = {
 
 // Invoices DAL
 export const invoicesDAL = {
-  async create(data: Omit<Invoice, "id" | "created_at">) {
+  async create(data: Omit<Invoice, "id" | "created_at" | "user_id">) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data: result, error } = await supabase
       .from("invoices")
-      .insert(data)
+      .insert({ ...data, user_id: user.id })
       .select()
       .single();
     if (error) throw error;
@@ -109,10 +118,13 @@ export const invoicesDAL = {
 
 // Invoice Line Items DAL
 export const lineItemsDAL = {
-  async create(data: Omit<InvoiceLineItem, "id" | "created_at">) {
+  async create(data: Omit<InvoiceLineItem, "id" | "created_at" | "user_id">) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data: result, error } = await supabase
       .from("invoice_line_items")
-      .insert(data)
+      .insert({ ...data, user_id: user.id })
       .select()
       .single();
     if (error) throw error;
@@ -131,10 +143,13 @@ export const lineItemsDAL = {
 
 // Extractions DAL
 export const extractionsDAL = {
-  async create(data: Omit<Extraction, "id" | "created_at">) {
+  async create(data: Omit<Extraction, "id" | "created_at" | "user_id">) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data: result, error } = await supabase
       .from("extractions")
-      .insert(data)
+      .insert({ ...data, user_id: user.id })
       .select()
       .single();
     if (error) throw error;
