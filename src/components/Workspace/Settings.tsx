@@ -1,19 +1,27 @@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/store/chatStore";
-import { Settings as SettingsIcon } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Settings as SettingsIcon, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export function Settings() {
   const { autoProcess, toggleAutoProcess } = useChatStore();
+  const { signOut } = useAuth();
   const defaultRedirectUrl = `https://fsnjwooppfqmiszxfidn.supabase.co/functions/v1/gmail-auth`;
 
   return (
     <div className="flex h-full flex-col p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <SettingsIcon className="h-5 w-5" />
-        <h2 className="text-2xl font-bold">Settings</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <SettingsIcon className="h-5 w-5" />
+          <h2 className="text-2xl font-bold">Settings</h2>
+        </div>
+        <Button variant="outline" onClick={signOut}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
       </div>
 
       <div className="space-y-4">
