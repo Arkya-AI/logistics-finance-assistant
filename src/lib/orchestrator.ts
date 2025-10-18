@@ -275,6 +275,7 @@ export async function processInvoice(fileId: string, runId?: string) {
           file_path: csvPath,
           signed_url: csvSignedUrl?.signedUrl,
           expires_at: expiresAt.toISOString(),
+          kind: "csv",
         }),
         supabase.from("exports").insert({
           user_id: user.id,
@@ -282,6 +283,7 @@ export async function processInvoice(fileId: string, runId?: string) {
           file_path: jsonPath,
           signed_url: jsonSignedUrl?.signedUrl,
           expires_at: expiresAt.toISOString(),
+          kind: "json",
         }),
       ]);
 

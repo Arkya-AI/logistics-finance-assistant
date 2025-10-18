@@ -21,6 +21,7 @@ export type Database = {
           file_path: string
           id: string
           invoice_id: string | null
+          kind: string
           signed_url: string | null
           user_id: string
         }
@@ -30,6 +31,7 @@ export type Database = {
           file_path: string
           id?: string
           invoice_id?: string | null
+          kind: string
           signed_url?: string | null
           user_id: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           file_path?: string
           id?: string
           invoice_id?: string | null
+          kind?: string
           signed_url?: string | null
           user_id?: string
         }
@@ -346,6 +349,10 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_oauth_states: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      purge_oauth_state: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
