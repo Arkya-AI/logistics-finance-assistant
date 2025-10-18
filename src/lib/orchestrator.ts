@@ -89,11 +89,15 @@ export async function processInvoice(fileId: string, runId?: string) {
       throw error;
     }
 
-    // Save extraction record
+    // Save extraction record (Fix #1: user_id is now required)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data: extraction, error: extractionError } = await supabase
       .from("extractions")
       .insert({
         file_id: fileId,
+        user_id: user.id,
         method: "gcv",
         status: "pending",
         raw_text_ref: rawText,
@@ -172,6 +176,7 @@ export async function processInvoice(fileId: string, runId?: string) {
       .upsert(
         {
           file_id: fileId,
+          user_id: user.id,
           doctype: null,
           invoice_number: header.invoiceNumber || null,
           invoice_date: header.invoiceDate || null,
@@ -192,10 +197,11 @@ export async function processInvoice(fileId: string, runId?: string) {
 
     if (invoiceError) throw invoiceError;
 
-    // Insert line items
+    // Insert line items (Fix #1: user_id is now required)
     if (lineItems && lineItems.length > 0) {
       const lineItemRecords = lineItems.map((item) => ({
         invoice_id: invoice.id,
+        user_id: user.id,
         description: item.description || null,
         quantity: item.quantity || null,
         unit_price: item.unitPrice || null,
@@ -261,11 +267,7 @@ export async function processInvoice(fileId: string, runId?: string) {
         .from("exports")
         .createSignedUrl(jsonPath, expiresIn);
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
-      // Store export records with signed URLs
+      // Store export records with signed URLs (user already fetched earlier)
       await Promise.all([
         supabase.from("exports").insert({
           user_id: user.id,

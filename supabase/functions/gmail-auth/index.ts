@@ -255,7 +255,11 @@ serve(async (req: Request) => {
         );
       }
 
-      console.log(`Gmail OAuth completed for user ${ownerId}, email: ${email}`);
+      // Fix #3: Gate sensitive logging (mask email, only in development)
+      if (Deno.env.get("NODE_ENV") !== "production") {
+        const maskedEmail = email.replace(/(.{2}).*(@.*)/, '$1***$2');
+        console.log(`Gmail OAuth completed for user, email: ${maskedEmail}`);
+      }
 
       return new Response(
         JSON.stringify({ success: true, email }),

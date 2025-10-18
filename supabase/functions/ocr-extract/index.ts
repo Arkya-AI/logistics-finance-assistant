@@ -46,7 +46,10 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`[ocr-extract] Processing fileId: ${fileId}`);
+    // Fix #3: Gate sensitive logging
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log(`[ocr-extract] Processing fileId: ${fileId}`);
+    }
 
     // Get file metadata
     const { data: fileData, error: fileError } = await supabase
@@ -77,7 +80,9 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`[ocr-extract] Downloaded file, size: ${blobData.size} bytes`);
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log(`[ocr-extract] Downloaded file, size: ${blobData.size} bytes`);
+    }
 
     // Convert blob to base64
     const arrayBuffer = await blobData.arrayBuffer();
@@ -113,7 +118,9 @@ serve(async (req: Request) => {
       ],
     };
 
-    console.log("[ocr-extract] Calling Google Vision API...");
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log("[ocr-extract] Calling Google Vision API...");
+    }
     const visionResponse = await fetch(visionUrl, {
       method: "POST",
       headers: {
@@ -132,7 +139,9 @@ serve(async (req: Request) => {
     }
 
     const visionData = await visionResponse.json();
-    console.log("[ocr-extract] Vision API response received");
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log("[ocr-extract] Vision API response received");
+    }
 
     // Extract text
     const text =
@@ -142,7 +151,9 @@ serve(async (req: Request) => {
       console.warn("[ocr-extract] No text detected in image");
     }
 
-    console.log(`[ocr-extract] Extracted ${text.length} characters`);
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log(`[ocr-extract] Extracted ${text.length} characters`);
+    }
 
     return new Response(
       JSON.stringify({ text }),

@@ -18,7 +18,10 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    console.log(`[structure-invoice] Processing ${text.length} characters`);
+    // Fix #3: Gate sensitive logging
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log(`[structure-invoice] Processing ${text.length} characters`);
+    }
 
     const systemPrompt = `You are an invoice data extraction assistant. Extract structured data from OCR text and return it as JSON matching this schema:
 {
@@ -114,7 +117,10 @@ Return ONLY the JSON object, no extra text.`;
     }
 
     const invoice = JSON.parse(toolCall.function.arguments);
-    console.log("[structure-invoice] Extracted invoice:", invoice.invoiceNumber);
+    // Fix #3: Don't log sensitive invoice numbers in production
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log("[structure-invoice] Extracted invoice:", invoice.invoiceNumber);
+    }
 
     return new Response(
       JSON.stringify({ invoice }),

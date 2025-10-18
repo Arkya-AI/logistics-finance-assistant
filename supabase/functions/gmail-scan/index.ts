@@ -36,21 +36,24 @@ serve(async (req) => {
       );
     }
 
-    // Parse and validate sinceDays from query params
+    // Parse and validate sinceDays from query params (Fix #2: Strict input validation)
     const url = new URL(req.url);
-    let sinceDays = Number(url.searchParams.get("sinceDays") ?? "14");
+    const rawSinceDays = Number(url.searchParams.get("sinceDays") ?? "14");
     
-    // Validate and sanitize sinceDays
-    if (!Number.isFinite(sinceDays)) {
-      sinceDays = 14;
+    // Validate: must be finite number, clamped between 1-60 days
+    let sinceDays = 14; // safe default
+    if (Number.isFinite(rawSinceDays)) {
+      sinceDays = Math.max(1, Math.min(60, Math.floor(rawSinceDays)));
     }
-    sinceDays = Math.max(1, Math.min(30, Math.floor(sinceDays)));
 
     const MAX_MESSAGES = 200;
     let messagesFetched = 0;
     let attachmentsSaved = 0;
 
-    console.log(`[User ${user.id}] Scanning Gmail for invoices from last ${sinceDays} days (max ${MAX_MESSAGES} messages)...`);
+    // Fix #3: Gate sensitive logging (only in development)
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log(`[User ${user.id}] Scanning Gmail for invoices from last ${sinceDays} days (max ${MAX_MESSAGES} messages)...`);
+    }
 
     // Get Gmail config for this user
     const { data: config, error: configError } = await supabase
@@ -140,14 +143,18 @@ serve(async (req) => {
       attachmentsSaved++;
 
       // Auto-process the invoice in user context
-      console.log(`Auto-processing file ${fileRecord.id} for user ${user.id}...`);
+      if (Deno.env.get("NODE_ENV") !== "production") {
+        console.log(`Auto-processing file ${fileRecord.id} for user ${user.id}...`);
+      }
       
       // Call processInvoice edge function (or orchestrator) with user context
       // For now, just log - in production, invoke ocr-extract or structure-invoice
       // supabase.functions.invoke('ocr-extract', { body: { fileId: fileRecord.id } })
     }
 
-    console.log(`Scan complete: ${messagesFetched} messages, ${attachmentsSaved} files saved, ${fileIds.length} queued for processing`);
+    if (Deno.env.get("NODE_ENV") !== "production") {
+      console.log(`Scan complete: ${messagesFetched} messages, ${attachmentsSaved} files saved, ${fileIds.length} queued for processing`);
+    }
 
     return new Response(
       JSON.stringify({

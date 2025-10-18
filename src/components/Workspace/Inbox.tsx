@@ -28,7 +28,10 @@ export function Inbox() {
       const config = await getGmailConfig();
       setGmailConnected(!!config);
     } catch (error) {
-      console.error("Error checking Gmail connection:", error);
+      // Fix #3: Gate sensitive logging to development only
+      if (process.env.NODE_ENV !== 'production') {
+        console.error("Error checking Gmail connection:", error);
+      }
     }
   }
 
@@ -57,7 +60,9 @@ export function Inbox() {
 
       setMessages(msgsWithFiles);
     } catch (error) {
-      console.error("Error loading messages:", error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error("Error loading messages:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to load messages",
@@ -77,7 +82,9 @@ export function Inbox() {
         description: "Please complete authentication in the new window",
       });
     } catch (error) {
-      console.error("Error initiating Gmail OAuth:", error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error("Error initiating Gmail OAuth:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to initiate Gmail connection",
@@ -96,7 +103,9 @@ export function Inbox() {
       });
       await loadMessages();
     } catch (error) {
-      console.error("Error scanning Gmail:", error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error("Error scanning Gmail:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to scan Gmail",
@@ -122,7 +131,9 @@ export function Inbox() {
       });
       await loadMessages();
     } catch (error) {
-      console.error("Error processing invoice:", error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error("Error processing invoice:", error);
+      }
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Processing failed",
@@ -160,7 +171,9 @@ export function Inbox() {
         description: `Downloading ${type.toUpperCase()} export`,
       });
     } catch (error) {
-      console.error("Download error:", error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error("Download error:", error);
+      }
       toast({
         title: "Error",
         description: `Failed to download ${type.toUpperCase()}`,
