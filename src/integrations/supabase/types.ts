@@ -640,6 +640,44 @@ export type Database = {
         }
         Relationships: []
       }
+      roles: {
+        Row: {
+          description: string | null
+          id: string
+        }
+        Insert: {
+          description?: string | null
+          id: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
