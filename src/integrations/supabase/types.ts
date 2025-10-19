@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      exports_quarantine: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          file_path: string | null
+          id: string | null
+          invoice_id: string | null
+          kind: string | null
+          signed_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          file_path?: string | null
+          id?: string | null
+          invoice_id?: string | null
+          kind?: string | null
+          signed_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          file_path?: string | null
+          id?: string | null
+          invoice_id?: string | null
+          kind?: string | null
+          signed_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       extractions: {
         Row: {
           created_at: string | null
@@ -97,6 +130,48 @@ export type Database = {
           },
         ]
       }
+      extractions_quarantine: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          file_id: string | null
+          gpt_json_ref: string | null
+          id: string | null
+          method: string | null
+          ocr_json_ref: string | null
+          raw_text_ref: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          file_id?: string | null
+          gpt_json_ref?: string | null
+          id?: string | null
+          method?: string | null
+          ocr_json_ref?: string | null
+          raw_text_ref?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          file_id?: string | null
+          gpt_json_ref?: string | null
+          id?: string | null
+          method?: string | null
+          ocr_json_ref?: string | null
+          raw_text_ref?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       files: {
         Row: {
           blob_ref: string
@@ -144,6 +219,45 @@ export type Database = {
           },
         ]
       }
+      files_quarantine: {
+        Row: {
+          blob_ref: string | null
+          created_at: string | null
+          filename: string | null
+          id: string | null
+          message_id: string | null
+          mime: string | null
+          pages: number | null
+          sha256: string | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          blob_ref?: string | null
+          created_at?: string | null
+          filename?: string | null
+          id?: string | null
+          message_id?: string | null
+          mime?: string | null
+          pages?: number | null
+          sha256?: string | null
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          blob_ref?: string | null
+          created_at?: string | null
+          filename?: string | null
+          id?: string | null
+          message_id?: string | null
+          mime?: string | null
+          pages?: number | null
+          sha256?: string | null
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       gmail_config: {
         Row: {
           access_token: string
@@ -170,6 +284,39 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          refresh_token?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gmail_config_quarantine: {
+        Row: {
+          access_token: string | null
+          created_at: string | null
+          email: string | null
+          id: string | null
+          refresh_token: string | null
+          token_expiry: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          refresh_token?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
           refresh_token?: string | null
           token_expiry?: string | null
           updated_at?: string | null
@@ -217,6 +364,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invoice_line_items_quarantine: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          invoice_id: string | null
+          quantity: number | null
+          unit_price: number | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          invoice_id?: string | null
+          quantity?: number | null
+          unit_price?: number | null
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          invoice_id?: string | null
+          quantity?: number | null
+          unit_price?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -283,6 +463,63 @@ export type Database = {
           },
         ]
       }
+      invoices_quarantine: {
+        Row: {
+          bill_to: string | null
+          confidence: number | null
+          created_at: string | null
+          currency: string | null
+          doctype: string | null
+          due_date: string | null
+          file_id: string | null
+          id: string | null
+          invoice_date: string | null
+          invoice_number: string | null
+          po_number: string | null
+          subtotal: number | null
+          tax: number | null
+          total: number | null
+          user_id: string
+          vendor_name: string | null
+        }
+        Insert: {
+          bill_to?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          currency?: string | null
+          doctype?: string | null
+          due_date?: string | null
+          file_id?: string | null
+          id?: string | null
+          invoice_date?: string | null
+          invoice_number?: string | null
+          po_number?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          total?: number | null
+          user_id: string
+          vendor_name?: string | null
+        }
+        Update: {
+          bill_to?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          currency?: string | null
+          doctype?: string | null
+          due_date?: string | null
+          file_id?: string | null
+          id?: string | null
+          invoice_date?: string | null
+          invoice_number?: string | null
+          po_number?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          total?: number | null
+          user_id?: string
+          vendor_name?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string | null
@@ -319,6 +556,42 @@ export type Database = {
         }
         Relationships: []
       }
+      messages_quarantine: {
+        Row: {
+          created_at: string | null
+          from: string | null
+          gmail_id: string | null
+          has_invoice: boolean | null
+          id: string | null
+          received_at: string | null
+          subject: string | null
+          thread_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          from?: string | null
+          gmail_id?: string | null
+          has_invoice?: boolean | null
+          id?: string | null
+          received_at?: string | null
+          subject?: string | null
+          thread_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          from?: string | null
+          gmail_id?: string | null
+          has_invoice?: boolean | null
+          id?: string | null
+          received_at?: string | null
+          subject?: string | null
+          thread_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_state: {
         Row: {
           code_verifier: string
@@ -339,6 +612,30 @@ export type Database = {
           created_at?: string | null
           expires_at?: string
           state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oauth_state_quarantine: {
+        Row: {
+          code_verifier: string | null
+          created_at: string | null
+          expires_at: string | null
+          state: string | null
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          state?: string | null
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          state?: string | null
           user_id?: string
         }
         Relationships: []
