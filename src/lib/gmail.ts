@@ -20,11 +20,7 @@ export interface GmailAttachment {
 }
 
 export async function initiateGmailOAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  const { data, error } = await supabase.functions.invoke("gmail-auth", {
-    body: { action: "initiate", userId: user?.id },
-  });
+  const { data, error } = await supabase.functions.invoke("gmail-auth?action=initiate");
 
   if (error) throw error;
   return data;
