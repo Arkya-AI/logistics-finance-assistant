@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { z } from "https://deno.land/x/zod/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,14 +38,11 @@ serve(async (req: Request) => {
       );
     }
 
-    // Parse request body
-    const { fileId } = await req.json();
-    if (!fileId) {
-      return new Response(
-        JSON.stringify({ error: "Missing fileId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // Validate request body with zod
+    const bodySchema = z.object({ 
+      fileId: z.string().uuid() 
+    });
+    const { fileId } = bodySchema.parse(await req.json());
 
     // Fix #3: Gate sensitive logging
     if (Deno.env.get("NODE_ENV") !== "production") {
@@ -160,6 +158,14 @@ serve(async (req: Request) => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
+    // Handle zod validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: error.errors }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
     console.error("[ocr-extract] Error:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),

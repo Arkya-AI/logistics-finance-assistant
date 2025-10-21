@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +38,12 @@ serve(async (req) => {
       );
     }
 
-    const { text } = await req.json();
+    // Validate request body with zod
+    const bodySchema = z.object({ 
+      fileId: z.string().uuid(),
+      text: z.string().min(1).max(200_000) 
+    });
+    const { fileId, text } = bodySchema.parse(await req.json());
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -153,6 +159,14 @@ Return ONLY the JSON object, no extra text.`;
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    // Handle zod validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: error.errors }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     console.error("[structure-invoice] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

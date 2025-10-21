@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,15 +37,15 @@ serve(async (req) => {
       );
     }
 
-    // Parse and validate sinceDays from query params (Fix #2: Strict input validation)
-    const url = new URL(req.url);
-    const rawSinceDays = Number(url.searchParams.get("sinceDays") ?? "14");
+    // Validate query parameters with zod
+    const querySchema = z.object({ 
+      sinceDays: z.coerce.number().int().min(1).max(60).optional() 
+    });
     
-    // Validate: must be finite number, clamped between 1-60 days
-    let sinceDays = 14; // safe default
-    if (Number.isFinite(rawSinceDays)) {
-      sinceDays = Math.max(1, Math.min(60, Math.floor(rawSinceDays)));
-    }
+    const url = new URL(req.url);
+    const { sinceDays = 14 } = querySchema.parse(
+      Object.fromEntries(url.searchParams)
+    );
 
     const MAX_MESSAGES = 200;
     let messagesFetched = 0;
@@ -168,6 +169,14 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    // Handle zod validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: error.errors }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     console.error("gmail-scan error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

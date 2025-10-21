@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { z } from "https://deno.land/x/zod/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -134,16 +135,14 @@ serve(async (req: Request) => {
 
     // === CALLBACK FLOW ===
     if (action === "callback") {
-      const code = url.searchParams.get("code");
-      const state = url.searchParams.get("state");
-
-      if (!code || !state) {
-        console.error("Missing code or state in callback");
-        return new Response(
-          JSON.stringify({ error: "Invalid callback: Missing code or state" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
+      // Validate callback parameters with zod
+      const qp = Object.fromEntries(url.searchParams);
+      const callbackSchema = z.object({ 
+        code: z.string().min(1),
+        state: z.string().min(10) 
+      });
+      
+      const { code, state } = callbackSchema.parse(qp);
 
       // Validate state and get code_verifier
       const { data: stateData, error: stateError } = await supabase
@@ -274,6 +273,14 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
+    // Handle zod validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: error.errors }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),
