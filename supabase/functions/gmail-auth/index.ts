@@ -49,31 +49,35 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    // Get authorization header
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      console.error("No authorization header");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: No authorization header" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    // Only require JWT for initiate action (callback comes from Google redirect)
+    let userId: string;
+    
+    if (action === "initiate") {
+      // Get authorization header
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        console.error("No authorization header");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: No authorization header" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get authenticated user from JWT
+      const { data: { user }, error: authError } = await supabase.auth.getUser(
+        authHeader.replace("Bearer ", "")
       );
-    }
 
-    // Get authenticated user from JWT
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
+      if (authError || !user) {
+        console.error("Auth error:", authError);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Invalid token" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
 
-    if (authError || !user) {
-      console.error("Auth error:", authError);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Invalid token" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const userId = user.id;
-    console.log(`Authenticated user: ${userId}, action: ${action}`);
+      userId = user.id;
+      console.log(`Authenticated user: ${userId}, action: ${action}`);
 
     // === INITIATE FLOW ===
     if (action === "initiate") {
@@ -133,6 +137,8 @@ serve(async (req: Request) => {
       );
     }
 
+    } // Close the if (action === "initiate") block
+    
     // === CALLBACK FLOW ===
     if (action === "callback") {
       // Validate callback parameters with zod
