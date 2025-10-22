@@ -12,9 +12,11 @@ import {
 import { clearPersistedState } from "@/lib/persist";
 import { useChatStore } from "@/store/chatStore";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export const DevPanel = () => {
   const { devErrorsEnabled, toggleDevErrors } = useChatStore();
+  const { signOut } = useAuth();
 
   const handleResetState = () => {
     clearPersistedState();
@@ -44,6 +46,9 @@ export const DevPanel = () => {
             </div>
           </div>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={signOut}>
+            Sign Out
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleResetState} className="text-destructive">
             Reset State
           </DropdownMenuItem>
