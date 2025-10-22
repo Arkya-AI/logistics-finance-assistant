@@ -18,21 +18,6 @@ export function TaskRunner({ onTabSwitch }: TaskRunnerProps) {
   useEffect(() => {
     const unsubscribe = eventBus.subscribeAll((event) => {
       addTaskEvent(event);
-      
-      // Show toast notifications for key events
-      if (event.status === "done" && event.step !== "PLAN") {
-        toast.success(event.message, {
-          duration: 3000,
-        });
-      } else if (event.status === "error") {
-        toast.error(event.message, {
-          duration: 5000,
-        });
-      } else if (event.step === "PLAN" && event.status === "running") {
-        toast.info("Starting job...", {
-          duration: 2000,
-        });
-      }
     });
 
     return unsubscribe;
