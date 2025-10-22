@@ -683,14 +683,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_oauth_states: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      purge_oauth_state: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_expired_oauth_states: { Args: never; Returns: undefined }
+      purge_oauth_state: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
