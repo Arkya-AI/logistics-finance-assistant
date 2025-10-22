@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { ChatMessage, TaskEvent, CurrentDoc, TimelineEntry, ExceptionItem } from "@/types";
 import { loadState, saveState } from "@/lib/persist";
 
-export type RunState = 'idle' | 'planning' | 'running' | 'paused:exception' | 'pending:approval' | 'done';
+export type RunState = 'idle' | 'planning' | 'running' | 'paused:exception' | 'pending:approval' | 'done' | 'error';
 
 interface ChatStore {
   messages: ChatMessage[];
