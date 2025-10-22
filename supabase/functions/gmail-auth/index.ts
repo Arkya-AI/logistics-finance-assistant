@@ -254,6 +254,10 @@ serve(async (req: Request) => {
         });
 
       if (upsertError) {
+        // Development-only detailed logging for easier debugging
+        if (Deno.env.get("NODE_ENV") !== "production") {
+          console.error("Upsert gmail_config failed", { ownerId, email, upsertError });
+        }
         console.error("Failed to store Gmail config:", upsertError);
         return new Response(
           JSON.stringify({ error: "Failed to save Gmail configuration" }),
