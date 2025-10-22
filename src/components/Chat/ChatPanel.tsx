@@ -2,14 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send } from "lucide-react";
+import { Send, LogOut } from "lucide-react";
 import { useChatStore } from "@/store/chatStore";
 import { handleUserMessage } from "@/lib/agentHandler";
 import { ChatMessage as ChatMessageType } from "@/types";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export function ChatPanel() {
   const [input, setInput] = useState("");
   const { messages, addMessage, addException, pauseRun, setPendingApproval, setActiveRunId } = useChatStore();
+  const { signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +47,12 @@ export function ChatPanel() {
   return (
     <div className="flex h-full flex-col border-r">
       <div className="border-b p-4">
-        <h2 className="text-lg font-semibold">Finance Agent</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">Finance Agent</h2>
+          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
         <p className="text-sm text-muted-foreground">
           Ask me to summarize, create invoices, send reminders, or process documents
         </p>
