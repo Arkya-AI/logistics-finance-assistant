@@ -46,8 +46,8 @@ const Index = () => {
     <div className="flex h-screen w-full relative">
       <DevPanel />
       
-      {/* Top Bar with Jobs Button */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
+      {/* Jobs Button - Right Side */}
+      <div className="absolute top-16 right-4 z-40">
         <Button
           variant="outline"
           size="sm"
