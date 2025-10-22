@@ -238,7 +238,8 @@ serve(async (req: Request) => {
       // Calculate token expiry
       const tokenExpiry = new Date(Date.now() + expires_in * 1000).toISOString();
 
-      // Upsert into gmail_config
+      // Upsert into gmail_config (service role client bypasses RLS)
+      console.log("Attempting to save Gmail config for user:", ownerId);
       const { error: upsertError } = await supabase
         .from("gmail_config")
         .upsert({
